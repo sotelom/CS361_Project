@@ -141,7 +141,9 @@ def check_num_trials(*args):
   entry = num_trials.get()
   if len(entry) !=0 and not num_trials.get().isnumeric():
     messagebox.showerror(title="Bad Input", message="# of Trials must be a positive integer.")
-    num_trials.set(value=10000)
+    num_trials.set(value=5000)
+  elif len(entry) !=0 and int(entry) > num_trials_max:
+    num_trials.set(value=num_trials_max)
 
 def clear_all_cards(*args, deck):
   num_players = int(num_opp.get()) + 1
@@ -369,7 +371,8 @@ def run_simulation(*args):
     win_pct_data  = pct_data[0:num_runs]
     tie_pct_data  = pct_data[num_runs:2 * num_runs]
     loss_pct_data = pct_data[2 * num_runs:3 * num_runs]
-    plt.figure()
+    fig = plt.figure(1)
+    plt.clf()
     plt.plot(x_data, win_pct_data, 'g', label="Win %")
     plt.plot(x_data, loss_pct_data, 'r', label="Loss %")
     plt.plot(x_data, tie_pct_data, 'b', label="Tie %")
@@ -392,6 +395,8 @@ def run_simulation(*args):
     title_str += f"\nBoard Cards= ({bcrds[0]}, {bcrds[1]}, {bcrds[2]}, {bcrds[3]}, {bcrds[4]})"
     plt.title(label=title_str, fontsize=10)
     plt.show(block = False)
+    fig.canvas.draw()
+    fig.canvas.flush_events()
   # Save simulation in history list for report
 
 
@@ -432,6 +437,7 @@ sim_history = []
 com_player_num = -1
 initial_num_opp = 1
 num_trials_init = 5000
+num_trials_max = 10000000
 # -----------------------------------------------------------------------------
 
 # GUI Settings ----------------------------------------------------------------
