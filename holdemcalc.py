@@ -1,7 +1,16 @@
 from Card import Card
 from functools import partial
+import subprocess
+import re
+import numpy as np
+import matplotlib.pyplot as plt
+import os
 from tkinter import *
+from tkinter import messagebox
+from tkinter import simpledialog
+from tkinter import filedialog
 from tkinter import ttk
+
 
 # Functions -------------------------------------------------------------------
 def create_deck(L):
@@ -9,6 +18,10 @@ def create_deck(L):
     for j in range(13):
       L.append(Card(j, i))
   return L
+
+def mark_all_unused(deck):
+  for c in deck:
+    c.set_used(False)
 
 def mark_used(deck, value_str, state):
   card_values = {'2':0,'3':1,'4':2,'5':3,'6':4,'7':5,'8':6,'9':7,'10':8,'J':9,
@@ -45,10 +58,11 @@ def update_card_list(*args, deck, player, card_pos):
   # Update all card lists
   update_all_card_lists(deck)
   #DEBUG
-  if player == com_player_num:
-    print(f"Community selected {new_card_str} for card#{card_pos}")
-  else:
-    print(f"player {player} selected {new_card_str} for card#{card_pos}")
+  if DEBUG:
+    if player == com_player_num:
+      print(f"Community selected {new_card_str} for card#{card_pos}")
+    else:
+      print(f"player {player} selected {new_card_str} for card#{card_pos}")
   #DEBUG
 
 
@@ -96,12 +110,13 @@ def update_num_opp(*args, deck):
       if state == '1':
         # Set fixed state to unchecked
         eval(f"p{player}_c{card_pos}_fix.set('0')")
-        # Get the last card that was used
-        card_str = eval(f"p{player}_c{card_pos}.get()")
+        # Get the last card that was active
+        card_str = eval(f"p{player}_c{card_pos}_lbl.get()")
         # if not random make available
         if card_str != '?':
           #DEBUG
-          print(f"removing card {card_str}, from player#{player}, card#{card_pos}")
+          if DEBUG:
+            print(f"removing card {card_str}, from player#{player}, card#{card_pos}")
           #DEBUG
           mark_used(deck, card_str, False)
         # Set card label to random
@@ -119,23 +134,305 @@ def update_all_card_lists(deck):
   for player in range(9):
     for card_pos in range(1, 3):
       exec(f"h_p{player}_c{card_pos}_lb['values'] = values")
-  for card_pos in range(1, 5):
+  for card_pos in range(1, 6):
     exec(f"h_com_c{card_pos}_lb['values'] = values")
 
+def check_num_trials(*args):
+  entry = num_trials.get()
+  if len(entry) !=0 and not num_trials.get().isnumeric():
+    messagebox.showerror(title="Bad Input", message="# of Trials must be a positive integer.")
+    num_trials.set(value=10000)
+
+def clear_all_cards(*args, deck):
+  num_players = int(num_opp.get()) + 1
+  # Clear fixed cards for players
+  for player in range(num_players):
+    for card_pos in range(1, 3):
+      # Set fixed state to unchecked
+      eval(f"p{player}_c{card_pos}_fix.set('0')")
+      # Get the last card that was active
+      card_str = eval(f"p{player}_c{card_pos}_lbl.get()")
+      # if not random make available
+      if card_str != '?':
+        #DEBUG
+        if DEBUG:
+          print(f"removing card {card_str}, from player#{player}, card#{card_pos}")
+        #DEBUG
+        mark_used(deck, card_str, False)
+      # Set card label to random
+      eval(f"p{player}_c{card_pos}_lbl.set('?')")
+      # Hide players list box
+      exec(f"h_p{player}_c{card_pos}_lb.place_forget()")
+  # Clear fixed cards for community cards
+  for card_pos in range(1, 6):
+    # Set fixed state to unchecked
+    eval(f"com_c{card_pos}_fix.set('0')")
+    # Get the last card that was active
+    card_str = eval(f"com_c{card_pos}_lbl.get()")
+    # if not random make available
+    if card_str != '?':
+      #DEBUG
+      if DEBUG:
+        print(f"removing card {card_str}, from community card#{card_pos}")
+      #DEBUG
+      mark_used(deck, card_str, False)
+    # Set card label to random
+    eval(f"com_c{card_pos}_lbl.set('?')")
+    # Hide players list box
+    exec(f"h_com_c{card_pos}_lb.place_forget()")
+  # Update all card lists
+  update_all_card_lists(deck)
+
+def is_valid_fname(fname):
+  if re.search(r'[^A-Za-z0-9_\-\\]', fname):
+    messagebox.showerror(title="Error", message="Illegal Filename!")
+    return False
+  else:
+    return True
+
 def run_save(*args):
-  pass
+  sim_config = dict()
+  get_simulation_setup(sim_config)
+  # Get filename
+  while True:
+    fname = simpledialog.askstring("Filename", "Please enter a filename to save")
+    if fname is None:
+      return
+    elif is_valid_fname(fname):
+      break
+  # Write info to output file
+  if not os.path.isdir("./Save"):
+    os.mkdir("./Save")
+  fh = open('./Save/' + fname + '.sim', 'w')
+  fh.write(f"{sim_config['num_runs']} {sim_config['num_opponents']} {sim_config['calc_percentages']}\n")
+  for player in range(sim_config['num_opponents'] + 1):
+    cards = eval(f"sim_config['p{player}_cards']")
+    fh.write(f"{' '.join(str(c) for c in cards)}\n")
+  cards = sim_config['com_cards']
+  fh.write(f"{' '.join(str(c) for c in cards)}\n")
+  fh.close()
 
 def run_load(*args):
-  pass
+  sim_config = dict()
+  fname = filedialog.askopenfilename(initialdir=os.getcwd() + '/Save', filetypes=[("Sim Files", "*.sim")])
+  fh = open(fname, 'r')
+  num_runs, num_opponents, calc_percentages = fh.readline().strip().split()
+  for player in range(int(num_opponents) + 1):
+    exec(f"sim_config['p{player}_cards'] = fh.readline().strip().split()")
+  sim_config['com_cards'] = fh.readline().strip().split()
+  fh.close()
+  # Set options
+  num_trials.set(num_runs)
+  num_opp.set(num_opponents)
+  win_pct.set("------")
+  tie_pct.set("------")
+  lose_pct.set("------")
+  plot_pct_history.set(calc_percentages)
+  # Clear unused players
+  update_num_opp(deck=deck)
+  # Clear the deck
+  mark_all_unused(deck)
+  # Load each players state
+  for player in range(int(num_opponents) + 1):
+    # get cards, if not -1 turn there fixed state on a set card label and mark used, else make random and hide dropdown list
+    for card_pos in range(1,3):
+        card = eval(f"sim_config['p{player}_cards'][{card_pos - 1}]")
+        if card == '-1':
+          # Set card label to random
+          eval(f"p{player}_c{card_pos}_lbl.set('?')")
+          # Set fixed state to unchecked
+          eval(f"p{player}_c{card_pos}_fix.set('0')")
+          # Hide players list box
+          exec(f"h_p{player}_c{card_pos}_lb.place_forget()")
+        else:
+          card = Card(int(card) % 13, int(card) // 13)
+          # Set card label to chosen card
+          eval(f"p{player}_c{card_pos}_lbl.set(card.get_str_value())")
+          # Mark card used in deck
+          mark_used(deck, card.get_str_value(), True)
+          # Set fixed state to unchecked
+          eval(f"p{player}_c{card_pos}_fix.set('1')")
+          # Set card selection in drop-down list
+          eval(f"p{player}_c{card_pos}.set(card.get_str_value())")
+          # Make Drop-down list appear
+          x = eval(f"p{player}_start[0]") + (card_pos - 1) * card_x_offset
+          y = eval(f"p{player}_start[1] + card_y_cb_offset")
+          eval(f"h_p{player}_c{card_pos}_lb.place(x=x,y=y)")
+  # Load board state
+  cards = sim_config['com_cards']
+  for card_pos in range(1,6):
+    card = cards[card_pos - 1]
+    if card == '-1':
+      # Set card label to random
+      eval(f"com_c{card_pos}_lbl.set('?')")
+      # Set fixed state to unchecked
+      eval(f"com_c{card_pos}_fix.set('0')")
+      # Hide players list box
+      exec(f"h_com_c{card_pos}_lb.place_forget()")
+    else:
+      card = Card(int(card) % 13, int(card) // 13)
+      # Set card label to chosen card
+      eval(f"com_c{card_pos}_lbl.set(card.get_str_value())")
+      # Mark card used in deck
+      mark_used(deck, card.get_str_value(), True)
+      # Set fixed state to unchecked
+      eval(f"com_c{card_pos}_fix.set('1')")
+      # Set card selection in drop-down list
+      eval(f"com_c{card_pos}.set(card.get_str_value())")
+      # Make Drop-down list appear
+      x = eval(f"com_start[0]") + (card_pos - 1) * card_x_offset
+      y = eval(f"com_start[1] + card_y_cb_offset")
+      eval(f"h_com_c{card_pos}_lb.place(x=x,y=y)")
+  # Update all card lists
+  update_all_card_lists(deck)
 
 def run_report(*args):
   pass
 
+def get_simulation_setup(sim_config):
+  num_runs = num_trials.get()
+  if len(num_runs) ==0:
+    num_runs = 5000
+  else:
+    num_runs = int(num_runs)
+  num_opponents = int(num_opp.get())
+  calc_percentages = int(plot_pct_history.get())
+  sim_config['num_runs'] = num_runs
+  sim_config['num_opponents'] = num_opponents
+  sim_config['calc_percentages'] = calc_percentages
+  for player in range(num_opponents + 1):
+    exec(f"sim_config['p{player}_cards'] = []")
+    card_1 = eval(f"p{player}_c1_lbl.get()")
+    if card_1 == '?':
+      card_1 = -1
+    else:
+      card_1 = Card(card_1.split()[0], card_1.split()[2]).get_int_value()
+    exec(f"sim_config['p{player}_cards'].append(card_1)")
+    card_2 = eval(f"p{player}_c2_lbl.get()")
+    if card_2 == '?':
+      card_2 = -1
+    else:
+      card_2 = Card(card_2.split()[0], card_2.split()[2]).get_int_value()
+    exec(f"sim_config['p{player}_cards'].append(card_2)")
+  sim_config['com_cards'] = []
+  for card in range(1,6):
+    card = eval(f"com_c{card}_lbl.get()")
+    if card == '?':
+      card = -1
+    else:
+      card = Card(card.split()[0], card.split()[2]).get_int_value()
+    exec(f"sim_config['com_cards'].append(card)")
+
 def run_simulation(*args):
-  pass
+  # Check all simulation parameters
+  num_runs = num_trials.get()
+  if len(num_runs) ==0:
+    messagebox.showerror(title="Bad Input", message="# of Trials cannot be empty.")
+    return
+  else:
+    num_runs = int(num_runs)
+  # Create simulation structure dictionary
+  sim_config = dict()
+  get_simulation_setup(sim_config)
+  # Write info to input file
+  fh = open(calculator_input_fname, 'w')
+  fh.write(f"{num_runs} {sim_config['num_opponents'] + 1} {sim_config['calc_percentages']}\n")
+  for player in range(sim_config['num_opponents'] + 1):
+    cards = eval(f"sim_config['p{player}_cards']")
+    fh.write(f"{' '.join(str(c) for c in cards)}\n")
+  cards = sim_config['com_cards']
+  fh.write(f"{' '.join(str(c) for c in cards)}\n")
+  fh.close()
+  # Popup Calulating message
+  popup = Toplevel(h_root)
+  popup.geometry("170x70")
+  popup.geometry(f"+{h_root.winfo_rootx()+main_window_width//2}+{h_root.winfo_rooty()+main_window_height//2}")
+  ttk.Label(popup, text="calculating...", padding="10 10 10 10", anchor="center", background="#33ff33", font=("Arial",16)).place(x=16, y=12)
+  popup.update()
+  # Run Calculator
+  subprocess.run("Calculator")
+  # Close pop-up
+  popup.destroy()
+  # Read in results & populate GUI
+  fh = open(calculator_results_fname, 'r')
+  results = [line.strip() for line in fh]
+  fh.close()
+  win_pct.set(f"{float(results[0]) * 100:.2f}")
+  tie_pct.set(f"{float(results[1]) * 100:.2f}")
+  lose_pct.set(f"{float(results[2]) * 100:.2f}")
+  if plot_pct_history.get() == '1':
+    dtype = np.dtype('f4')
+    with open(calculator_percent_fname, 'rb') as f:
+      pct_data = 100 * np.fromfile(f, dtype)
+    f.close()
+    x_data = np.linspace(1, num_runs, num_runs).astype(int)
+    win_pct_data  = pct_data[0:num_runs]
+    tie_pct_data  = pct_data[num_runs:2 * num_runs]
+    loss_pct_data = pct_data[2 * num_runs:3 * num_runs]
+    plt.figure()
+    plt.plot(x_data, win_pct_data, 'g', label="Win %")
+    plt.plot(x_data, loss_pct_data, 'r', label="Loss %")
+    plt.plot(x_data, tie_pct_data, 'b', label="Tie %")
+    plt.legend(loc="upper right")
+    # if num_runs > 100000:
+    #   plt.xscale('log')
+    plt.axis([1, num_runs, 0, 100])
+    plt.grid(visible=True)
+    title_str = f"{num_runs} Trials for ({CARD_INT_TO_STR[sim_config['p0_cards'][0]]}, "\
+                f"{CARD_INT_TO_STR[sim_config['p0_cards'][1]]}) vs {sim_config['num_opponents']} "\
+                f"opponent{'s' if sim_config['num_opponents'] > 1 else ''}\n Opponent's Hands: "
+    for player in range(1, sim_config['num_opponents'] + 1):
+      card1 = eval(f"CARD_INT_TO_STR[sim_config['p{player}_cards'][0]]")
+      card2 = eval(f"CARD_INT_TO_STR[sim_config['p{player}_cards'][1]]")
+      if player == sim_config['num_opponents']:
+        title_str += f"({card1}, {card2})"
+      else:
+        title_str += f"({card1}, {card2}), "
+    bcrds = [CARD_INT_TO_STR[e] for e in sim_config['com_cards']]
+    title_str += f"\nBoard Cards= ({bcrds[0]}, {bcrds[1]}, {bcrds[2]}, {bcrds[3]}, {bcrds[4]})"
+    plt.title(label=title_str, fontsize=10)
+    plt.show(block = False)
+  # Save simulation in history list for report
+
+
+
+
+
+
+  #DEBUG
+  if DEBUG:
+    print(f"\nSim Config:")
+    print(f"\t# of runs = {num_runs}")
+    print(f"\t# of opponents = {sim_config['num_opponents']}")
+    print(f"\tDo Percentages = {sim_config['do_percentages']}")
+    for player in range(sim_config['num_opponents'] + 1):
+      cards = eval(f"sim_config['p{player}_cards']")
+      print(f"\tPlayer #{player} cards = ({cards[0]}, {cards[1]})")
+    cards = sim_config['com_cards']
+    print(f"\tCommunity cards = ({cards[0]}, {cards[1]},  {cards[2]}, {cards[3]}, {cards[4]})")
+  #DEBUG
 #------------------------------------------------------------------------------
 
 
+# Global variables ---------------------------------------------------------=--
+DEBUG = 0
+CARD_INT_TO_STR = {-1: '?',
+                    0: ' 2C',  1: '3C',  2: '4C',  3: '5C',  4: '6C',  5: '7C',  6: '8C',  7: '9C',  8: '10C',  9: 'JC', 10: 'QC', 11: 'KC', 12: 'AC',
+                    13: '2D', 14: '3D', 15: '4D', 16: '5D', 17: '6D', 18: '7D', 19: '8D', 20: '9D', 21: '10D', 22: 'JD', 23: 'QD', 24: 'KD', 25: 'AD',
+                    26: '2H', 27: '3H', 28: '4H', 29: '5H', 30: '6H', 31: '7H', 32: '8H', 33: '9H', 34: '10H', 35: 'JH', 36: 'QH', 37: 'KH', 38: 'AH',
+                    39: '2S', 40: '3S', 41: '4S', 42: '5S', 43: '6S', 44: '7S', 45: '8S', 46: '9S', 47: '10S', 48: 'JS', 49: 'QS', 50: 'KS', 51: 'AS',
+                  }
+calculator_input_fname = "input.txt"
+calculator_results_fname = "calcResults.txt"
+calculator_percent_fname = "calcPercents.dat"
+calculator_service_fname = "calcService.txt"
+sim_service_fname = "holdem_service.txt"
+deck = create_deck([])
+sim_history = []
+com_player_num = -1
+initial_num_opp = 1
+num_trials_init = 5000
+# -----------------------------------------------------------------------------
 
 # GUI Settings ----------------------------------------------------------------
 main_title = "Hold'em Odds"
@@ -159,7 +456,7 @@ card_padding_default = "3 3 3 3"
 card_label_width = 8
 num_opp_label_width = 15
 btn_width_default = 10
-cards_relief = "sunken"
+cards_relief = "groove"
 result_relief = "sunken"
 card_y_lbl_offset = 33
 card_x_offset = 82
@@ -185,24 +482,17 @@ frame_space = 5
 cards_frame_start = (board_window_width + frame_space, 0)
 btn_x_space = 75
 btn_start = (results_start[0] + results_x_space + 150, results_start[1] + 2 * result_y_space)
+clear_cards_start = (num_opp_start[0] + 115, trials_start[1] + 32)
 # -----------------------------------------------------------------------------
 
 
-# Main window
+# GUI Definition --------------------------------------------------------------
 h_root = Tk()
 h_root.title(main_title)
 h_root.geometry(f"{main_window_width}x{main_window_height}")
 h_root.resizable(False, False)
 h_root_frame = ttk.Frame(h_root, padding = root_frame_padding, width=main_window_width, height=main_window_height)
-#h_cards_frame = ttk.Frame(h_root_frame, width=main_window_width-board_window_width-frame_space-10,
-#height=main_window_height-130, relief="groove")
-h_board_frame = ttk.Frame(h_root_frame, width=board_window_width, height=main_window_height-130, relief="groove")
 
-
-# Global GUI variables ------------------------
-deck = create_deck([])
-com_player_num = -1
-initial_num_opp = 1
 # Player card variables
 for player in range(9):
   exec(f"p{player}_c1 = StringVar()")
@@ -216,15 +506,17 @@ for card in range(1,6):
   exec(f"com_c{card} = StringVar()")
   exec(f"com_c{card}_lbl = StringVar(value='?')")
   exec(f"com_c{card}_fix = StringVar(value=0)")
-num_trials = StringVar(value=10000)
+num_trials = StringVar(value=f"{num_trials_init}")
+num_trials.trace_add("write", check_num_trials)
 num_opp = StringVar(value=initial_num_opp)
-win_pct = StringVar()
-tie_pct = StringVar()
-lose_pct = StringVar()
-# ---------------------------------------------
+win_pct = StringVar(value="------")
+tie_pct = StringVar(value="------")
+lose_pct = StringVar(value="------")
+plot_pct_history = StringVar(value=1)
 
-
-# Main frame in window --------------------------------------------------------
+#h_cards_frame = ttk.Frame(h_root_frame, width=main_window_width-board_window_width-frame_space-10,
+#height=main_window_height-130, relief="groove")
+h_board_frame = ttk.Frame(h_root_frame, width=board_window_width, height=main_window_height-130, relief="groove")
 # Player card widgets
 for player in range(9):
   # Player label
@@ -293,7 +585,8 @@ h_run_btn = ttk.Button(h_root_frame, text="Run", width=btn_width_default, comman
 h_report_btn = ttk.Button(h_root_frame, text="Report", width=btn_width_default, command=run_report)
 h_load_btn = ttk.Button(h_root_frame, text="Load", width=btn_width_default, command=run_load)
 h_save_btn = ttk.Button(h_root_frame, text="Save", width=btn_width_default, command=run_save)
-
+h_clear_cards_btn = ttk.Button(h_root_frame, text="Clear Cards", width=btn_width_default, command=partial(clear_all_cards, deck=deck))
+h_toggle_pct_plot = ttk.Checkbutton(h_root_frame, text="Plot % History", variable=plot_pct_history)
 #------------------------------------------------------------------------------
 
 # Place widgets ---------------------------------------------------------------
@@ -325,6 +618,8 @@ h_trials_label.place(x=trials_start[0], y=trials_start[1])
 h_trials_entry.place(x=trials_start[0]+1, y=trials_start[1] + result_y_space)
 h_num_opp_label.place(x=num_opp_start[0], y=num_opp_start[1])
 h_num_opp_lb.place(x=num_opp_start[0] + num_opp_x_space, y=num_opp_start[1] + result_y_space)
+h_clear_cards_btn.place(x=clear_cards_start[0], y=clear_cards_start[1])
+h_toggle_pct_plot.place(x=clear_cards_start[0], y=clear_cards_start[1] - 30)
 h_board_frame.place(x=0,y=0)
 h_run_btn.place(x=btn_start[0], y=btn_start[1])
 h_report_btn.place(x=btn_start[0] + btn_x_space, y=btn_start[1])
