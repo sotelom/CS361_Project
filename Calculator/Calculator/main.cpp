@@ -91,7 +91,7 @@ int main()
     ofstream outFile;
     
     // Seed random num generator
-    srand(time(NULL));
+    srand((unsigned int)time(NULL));
 
     inFile.open(inFileName, ios::in);
     if (!inFile)
@@ -361,9 +361,7 @@ int main()
                     tiePercent[handNum]  = tieCount  / denom;
                     lossPercent[handNum] = lossCount / denom;
                 }
-            }            
-
-
+            }
         } // end for (int handNum...
 
         // Write resluts to results file
@@ -408,7 +406,6 @@ int main()
     } // end if (runSim)
     return 0;
 }
-
 
 
 // Function Definitions -------------------------------------------------------
@@ -457,6 +454,7 @@ void _swapCards(Card *c1, Card *c2)
     c2->suit = s;
     return;
 }
+
 
 void ShuffleCards(Card *deck, int remainingCards)
 {
@@ -523,6 +521,7 @@ bool _CompareKickersLost(const int *k1, const int *k2, int numToCompare)
     return false;
 }
 
+
 bool PlayerTieLost(const HandStatus &playerHandStatus, const HandStatus &opponentHandStatus)
 {
     // Opponents are assumed to have identical hand rank, so compare kickers to determine if lost
@@ -558,13 +557,12 @@ bool PlayerTieLost(const HandStatus &playerHandStatus, const HandStatus &opponen
     case HandRank::HIGH_CARD:
         // Compare all 5 kickers
         return _CompareKickersLost(playerHandStatus.kickers, opponentHandStatus.kickers, 5);
-#if DEBUG
     default:
         cerr << "Bad HandRank detected in PlayerTieLost()\n";
         return false;
-#endif
     }
 }
+
 
 bool _CompareKickersWon(const int *k1, const int *k2, int numToCompare)
 {
@@ -577,6 +575,7 @@ bool _CompareKickersWon(const int *k1, const int *k2, int numToCompare)
     }
     return false;
 }
+
 
 bool PlayerTieWon(const HandStatus &playerHandStatus, const HandStatus &opponentHandStatus)
 {
@@ -613,11 +612,9 @@ bool PlayerTieWon(const HandStatus &playerHandStatus, const HandStatus &opponent
     case HandRank::HIGH_CARD:
         // Compare all 5 kickers
         return _CompareKickersWon(playerHandStatus.kickers, opponentHandStatus.kickers, 5);
-#if DEBUG
     default:
         cerr << "Bad HandRank detected in PlayerTieLost()\n";
         return false;
-#endif
     }
 }
 
@@ -652,7 +649,24 @@ bool _containsStraight(vector<int> &vValues, int &kicker)
     return false;
 }
 
-bool _isRoyalFlush(const Card *hand, HandStatus &handStatus)
+
+bool _isStraight(const Card *hand, HandStatus &handStatus)
+{
+    vector<int> vValues;
+    // Put values in a vector and sort in descending order
+    for (int i = 0; i < 7; ++i)
+        vValues.push_back(hand[i].value);
+    sort(vValues.begin(), vValues.end(), greater<int>());
+    if (_containsStraight(vValues, handStatus.kickers[0]))
+    {
+        handStatus.rank = HandRank::STRAIGHT;
+        return true;
+    }
+    return false;
+}
+
+
+void setHandStatus(const Card *hand, HandStatus &handStatus)
 {
     // Check for Royal Flush, can also check for Straight Flush & Flush
     // Put same suit cards in there own vector
@@ -692,21 +706,18 @@ bool _isRoyalFlush(const Card *hand, HandStatus &handStatus)
         if (cValues[0] == 12 && cValues[1] == 11 && cValues[2] == 10 && cValues[2] == 9 && cValues[2] == 8)
         {
             handStatus.rank = HandRank::ROYAL_FLUSH;
-            return true;
+            return;
         }
         else if (_containsStraight(cValues, handStatus.kickers[0]))
         {
             handStatus.rank = HandRank::STRAIGHT_FLUSH;
-            return false;
+            return;
         }
         else
         {
             handStatus.rank = HandRank::FLUSH;
             for (int i = 0; i < 5; ++i)
-            {
                 handStatus.kickers[i] = cValues[i];
-            }
-            return false;
         }
     }
     else if (dValues.size() >= 5)
@@ -717,21 +728,18 @@ bool _isRoyalFlush(const Card *hand, HandStatus &handStatus)
         if (dValues[0] == 12 && dValues[1] == 11 && dValues[2] == 10 && dValues[2] == 9 && dValues[2] == 8)
         {
             handStatus.rank = HandRank::ROYAL_FLUSH;
-            return true;
+            return;
         }
         else if (_containsStraight(dValues, handStatus.kickers[0]))
         {
             handStatus.rank = HandRank::STRAIGHT_FLUSH;
-            return false;
+            return;
         }
         else
         {
             handStatus.rank = HandRank::FLUSH;
             for (int i = 0; i < 5; ++i)
-            {
                 handStatus.kickers[i] = dValues[i];
-            }
-            return false;
         }
     }
     else if (hValues.size() >= 5)
@@ -742,21 +750,18 @@ bool _isRoyalFlush(const Card *hand, HandStatus &handStatus)
         if (hValues[0] == 12 && hValues[1] == 11 && hValues[2] == 10 && hValues[2] == 9 && hValues[2] == 8)
         {
             handStatus.rank = HandRank::ROYAL_FLUSH;
-            return true;
+            return;
         }
         else if (_containsStraight(hValues, handStatus.kickers[0]))
         {
             handStatus.rank = HandRank::STRAIGHT_FLUSH;
-            return false;
+            return;
         }
         else
         {
             handStatus.rank = HandRank::FLUSH;
             for (int i = 0; i < 5; ++i)
-            {
                 handStatus.kickers[i] = hValues[i];
-            }
-            return false;
         }
     }
     else if (sValues.size() >= 5)
@@ -767,63 +772,58 @@ bool _isRoyalFlush(const Card *hand, HandStatus &handStatus)
         if (sValues[0] == 12 && sValues[1] == 11 && sValues[2] == 10 && sValues[2] == 9 && sValues[2] == 8)
         {
             handStatus.rank = HandRank::ROYAL_FLUSH;
-            return true;
+            return;
         }
         else if (_containsStraight(sValues, handStatus.kickers[0]))
         {
             handStatus.rank = HandRank::STRAIGHT_FLUSH;
-            return false;
+            return;
         }
         else
         {
             handStatus.rank = HandRank::FLUSH;
             for (int i = 0; i < 5; ++i)
-            {
                 handStatus.kickers[i] = sValues[i];
-            }
-            return false;
         }
     }
-    return false;
-}
-
-
-bool _isFourOfKind(const Card *hand, HandStatus &handStatus)
-{
+    
     // Check for 4 of a kind, 3 of a kind, fullhouse, 2-pair, 1-pair, and High Card
-    // Put values in a vector
-    int valueCounts[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, max_count = 0, next_max_count = 0, max_count_val = 0, next_max_count_val;
+    int valueCounts[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    int max_count = 0, max_count_val = -1, next_max_count = 0,  next_max_count_val = -1;
     priority_queue<int> pqValues;
 
-    // Get hand info
+    // Get the count of each value in hand and place values in a max priority queue
     for (int i = 0; i < 7; ++i)
     {
         ++valueCounts[hand[i].value];
         pqValues.push(hand[i].value);
     }
+    // Determine the 2 highest frequency cards, in case of tie of frequency take card with highest value
     for (int i = 0; i < 13; ++i)
     {
         if (valueCounts[i] >= max_count)
         {
-            // This is the highest frequency card or tied with higher value, previous highest gets pushed down to next
-            next_max_count     = max_count;
+            // This is the highest or same as highest frequency card but with higher value, the previous highest gets pushed down to next highest
+            next_max_count = max_count;
             next_max_count_val = max_count_val;
-            max_count          = valueCounts[i];
-            max_count_val      = i;
+            max_count = valueCounts[i];
+            max_count_val = i;
         }
         else if (valueCounts[i] >= next_max_count)
         {
-            // This is the next highest frequency card or tied with higher value
-            next_max_count     = valueCounts[i];
+            // This is the next highest or same as next highest frequency card but with higher value, pevious next highest is gone
+            next_max_count = valueCounts[i];
             next_max_count_val = i;
-        }            
+        }
     }
-    // Process hand
+    // Process hand based on the 2 highest counts
+    // Check for 4 of a kind
     if (max_count == 4)
     {
-        // 4 of a kind, 2 kickers, type and high card
+        // 4 of a kind, 2 kickers, value of 4 of a kind and value of highest card that isn't the 4 of a kind value
         handStatus.rank = HandRank::FOUR_OF_KIND;
         handStatus.kickers[0] = max_count_val;
+        // Assign highest value which is not the 4 of a kind value
         int numAssigned = 0;
         while (numAssigned < 1)
         {
@@ -833,29 +833,36 @@ bool _isFourOfKind(const Card *hand, HandStatus &handStatus)
                 handStatus.kickers[numAssigned] = pqValues.top();
             }
             pqValues.pop();
-        }        
-        return true;
+        }
+        return;
     }
+    // Check for Full-house
     if (max_count == 3)
     {
-        // Check for full-house
+        // Check for pair to make full-house
         if (next_max_count >= 2)
         {
-            // Full-House, 2 kickers, type of 3 and type of pair
+            // Full-House, 2 kickers, value of highest 3 of a kind and value of highest pair
             handStatus.rank = HandRank::FULL_HOUSE;
             handStatus.kickers[0] = max_count_val;
             handStatus.kickers[1] = next_max_count_val;
-            return false;
-        }        
+            return;
+        }
     }
-    // Make sure flush isn't already set, since it's higher then rest of possiblities
+    // Check for Flush
     if (handStatus.rank == HandRank::FLUSH)
     {
-        return false;
+        return;
     }
+    // Check for Straight
+    if (_isStraight(hand, handStatus))
+    {
+        return;
+    }
+    // Check for 3 of a kind
     if (max_count == 3)
     {
-        // 3 of a kind, 3 kickers, type of 3 and 2 high cards
+        // 3 of a kind, 3 kickers, value of 3 of a kind and values of 2 highest cards that isn't the highest 3 of a kind
         handStatus.rank = HandRank::THREE_OF_KIND;
         handStatus.kickers[0] = max_count_val;
         int numAssigned = 0;
@@ -868,14 +875,15 @@ bool _isFourOfKind(const Card *hand, HandStatus &handStatus)
             }
             pqValues.pop();
         }
-        return false;
-    }    
+        return;
+    }
+    // Check for 2-pair or 1-pair
     if (max_count == 2)
     {
-        // Check for 2-pair
+        // Check for 2nd pair
         if (next_max_count == 2)
         {
-            // 2-pair, 3 kickers, types of pairs and 1 high card
+            // 2-pair, 3 kickers, values of 2 highest pairs and value of highest card that isn't the 2 pairs
             handStatus.rank = HandRank::TWO_PAIR;
             handStatus.kickers[0] = max_count_val;
             handStatus.kickers[1] = next_max_count_val;
@@ -892,7 +900,7 @@ bool _isFourOfKind(const Card *hand, HandStatus &handStatus)
         }
         else
         {
-            // One-pair, 4 kickers, type of pair and 3 high cards
+            // One-pair, 4 kickers, value of highest pair and values of 3 highest cards that aren't the highest pair value
             handStatus.rank = HandRank::ONE_PAIR;
             handStatus.kickers[0] = max_count_val;
             int numAssigned = 0;
@@ -906,57 +914,16 @@ bool _isFourOfKind(const Card *hand, HandStatus &handStatus)
                 pqValues.pop();
             }
         }
-        return false;
+        return;
     }
     // max_count == 1 -> High card, 5 kickers, all 5 highest cards
     handStatus.rank = HandRank::HIGH_CARD;
     int numAssigned = 0;
     while (numAssigned < 5)
-    {        
+    {
         handStatus.kickers[numAssigned] = pqValues.top();
         pqValues.pop();
         ++numAssigned;
     }
-    return false;
-}
-
-
-bool _isStraight(const Card *hand, HandStatus &handStatus)
-{
-    vector<int> vValues;
-    // Put values in a vector and sort in descending order
-    for (int i = 0; i < 7; ++i)
-        vValues.push_back(hand[i].value);
-    sort(vValues.begin(), vValues.end(), greater<int>());
-    if (_containsStraight(vValues, handStatus.kickers[0]))
-    {
-        handStatus.rank = HandRank::STRAIGHT;
-        return true;
-    }
-    return false;
-}
-
-
-void setHandStatus(const Card *hand, HandStatus &handStatus)
-{
-    // Determine hand status of passed in hand
-    if (_isRoyalFlush(hand, handStatus))
-        return;
-    else if (handStatus.rank == HandRank::STRAIGHT_FLUSH)
-        return;
-    else if (_isFourOfKind(hand, handStatus))
-        return;
-    else if (handStatus.rank == HandRank::FULL_HOUSE)
-        return;
-    else if (handStatus.rank == HandRank::FLUSH)
-        return;
-    else if (_isStraight(hand, handStatus))
-        return;
-    else if (handStatus.rank == HandRank::THREE_OF_KIND)
-        return;
-    else if (handStatus.rank == HandRank::TWO_PAIR)
-        return;
-    else if (handStatus.rank == HandRank::ONE_PAIR)
-        return;
     return;
 }

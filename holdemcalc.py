@@ -186,7 +186,7 @@ def clear_all_cards(*args, deck):
   update_all_card_lists(deck)
 
 def is_valid_fname(fname):
-  if re.search(r'[^A-Za-z0-9_\-\\]', fname):
+  if re.search(r'[^A-Za-z0-9_ \-\\]', fname):
     messagebox.showerror(title="Error", message="Illegal Filename!")
     return False
   else:
