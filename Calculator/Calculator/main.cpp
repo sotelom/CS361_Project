@@ -10,6 +10,7 @@
 #include <ctime>
 using namespace std;
 #define DEBUG 0
+#define RAND_CARD_VALUE 52
 
 const char *inFileName  = "input.txt";
 const char *outFileName = "calcService.txt";
@@ -32,11 +33,11 @@ enum class HandOutcome {LOST = -1, TIE, WON, NOT_SET};
 struct Card {
     int value;
     int suit;
-    Card() { value = -1; suit = -1; }
+    Card() { value = RAND_CARD_VALUE; suit = RAND_CARD_VALUE; }
     Card(int iVal) { value = iVal % 13; suit = iVal / 13; }
     int getIntValue()
     {
-        if (value == -1)
+        if (value == RAND_CARD_VALUE)
             return value;
         else
             return value + 13 * suit;
@@ -419,7 +420,7 @@ void ReadSimInfo(ifstream &inFile, Player *playerInit, Board &boardInit, int &nu
         {
             int c;
             inFile >> c;
-            if (c != -1)
+            if (c != RAND_CARD_VALUE)
             {
                 ++cardsPicked;
                 pickedCardValues.insert(c);
@@ -432,7 +433,7 @@ void ReadSimInfo(ifstream &inFile, Player *playerInit, Board &boardInit, int &nu
     {
         int c;
         inFile >> c;
-        if (c != -1)
+        if (c != RAND_CARD_VALUE)
         {
             ++cardsPicked;
             pickedCardValues.insert(c);
@@ -474,7 +475,7 @@ void AssignCards(Player *player, const Player *playerInit, Board &board, const B
     int iDeck = 0;
     for (int i = 0; i < numPlayers; ++i)
     {
-        if (playerInit[i].cards[0].value == -1)
+        if (playerInit[i].cards[0].value == RAND_CARD_VALUE)
         {
             player[i].cards[0].setValueSuit(deck[iDeck].value, deck[iDeck].suit);
             ++iDeck;
@@ -483,7 +484,7 @@ void AssignCards(Player *player, const Player *playerInit, Board &board, const B
         {
             player[i].cards[0].setValueSuit(playerInit[i].cards[0].value, playerInit[i].cards[0].suit);
         }
-        if (playerInit[i].cards[1].value == -1)
+        if (playerInit[i].cards[1].value == RAND_CARD_VALUE)
         {
             player[i].cards[1].setValueSuit(deck[iDeck].value, deck[iDeck].suit);
             ++iDeck;
@@ -495,7 +496,7 @@ void AssignCards(Player *player, const Player *playerInit, Board &board, const B
     }
     for (int i = 0; i < 5; ++i)
     {
-        if (boardInit.cards[i].value == -1)
+        if (boardInit.cards[i].value == RAND_CARD_VALUE)
         {
             board.cards[i].setValueSuit(deck[iDeck].value, deck[iDeck].suit);
             ++iDeck;
