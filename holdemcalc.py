@@ -223,7 +223,7 @@ def run_load(*args):
     exec(f"sim_config['p{player}_cards'] = fh.readline().strip().split()")
   sim_config['com_cards'] = fh.readline().strip().split()
   fh.close()
-  # Set options
+  # Set option GUI variables
   num_trials.set(num_runs)
   num_opp.set(num_opponents)
   win_pct.set("------")
@@ -432,12 +432,13 @@ calculator_results_fname = "calcResults.txt"
 calculator_percent_fname = "calcPercents.dat"
 calculator_service_fname = "calcService.txt"
 sim_service_fname = "holdem_service.txt"
-deck = create_deck([])
-sim_history = []
 com_player_num = -1
 initial_num_opp = 1
 num_trials_init = 5000
 num_trials_max = 10000000
+# Non-constants
+deck = create_deck([])
+simulation_history = []
 # -----------------------------------------------------------------------------
 
 # GUI Settings ----------------------------------------------------------------
