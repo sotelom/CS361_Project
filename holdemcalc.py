@@ -414,6 +414,8 @@ h_root.geometry(f"{main_window_width}x{main_window_height}")
 h_root.resizable(False, False)
 h_root_frame = ttk.Frame(h_root, padding = root_frame_padding, width=main_window_width, height=main_window_height)
 h_board_frame = ttk.Frame(h_root_frame, width=board_window_width, height=main_window_height-130, relief="groove")
+style = ttk.Style()
+style.theme_use('alt')
 
 # Load card images
 for card in range(53):
