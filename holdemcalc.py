@@ -201,7 +201,23 @@ def run_load(*args):
     exec(f"h_com_c{card_pos}_lbl['image'] = c{card}_img")
 
 def run_report(*args):
-  pass
+  for e in g_simulation_history:
+    print(f"Hand #{e['hand_num']}")
+    print(f"  Player Hand = ({CARD_INT_TO_STR[e['player_cards'][0]]}, "
+          f"{CARD_INT_TO_STR[e['player_cards'][1]]})")
+    print(f"  Opponent Hands = ", end='')
+    for i in range(e['num_opponents']):
+      if i != e['num_opponents'] - 1:
+        print(f"({CARD_INT_TO_STR[e['opponent_cards'][2 * i]]}, {CARD_INT_TO_STR[e['opponent_cards'][2 * i + 1]]}), ", end='')
+      else:
+        print(f"({CARD_INT_TO_STR[e['opponent_cards'][2 * i]]}, {CARD_INT_TO_STR[e['opponent_cards'][2 * i + 1]]})")
+    print(f"  Board Cards = ({CARD_INT_TO_STR[e['board_cards'][0]]}, "
+          f"{CARD_INT_TO_STR[e['board_cards'][2]]}, {CARD_INT_TO_STR[e['board_cards'][2]]}, "
+          f"{CARD_INT_TO_STR[e['board_cards'][3]]}, {CARD_INT_TO_STR[e['board_cards'][4]]})")
+    print(f"  # of trials = {e['num_runs']}")
+    print(f"  Win %  = {e['win_pct']}")
+    print(f"  Lose % = {e['lose_pct']}")
+    print(f"  Tie %  = {e['tie_pct']}\n")
 
 def get_simulation_setup(sim_config):
   num_runs = num_trials.get()
@@ -216,7 +232,7 @@ def get_simulation_setup(sim_config):
   sim_config['calc_percentages'] = calc_percentages
 
 def run_simulation(*args):
-  global g_cards
+  global g_cards, g_simulation_history, g_hand_num
   # Check all simulation parameters
   num_runs = num_trials.get()
   if len(num_runs) ==0:
@@ -288,12 +304,15 @@ def run_simulation(*args):
     fig.canvas.draw()
     fig.canvas.flush_events()
   # Save simulation in history list for report
-
-
-
-
-
-
+  g_hand_num += 1
+  sim_config['hand_num'] = g_hand_num
+  sim_config['player_cards'] = g_cards[:2]
+  sim_config['opponent_cards'] = g_cards[2:2 * (sim_config['num_opponents'] + 1)]
+  sim_config['board_cards'] = g_cards[18:23]
+  sim_config['win_pct'] = win_pct.get()
+  sim_config['tie_pct'] = tie_pct.get()
+  sim_config['lose_pct'] = lose_pct.get()
+  g_simulation_history.append(sim_config)
   #DEBUG
   if DEBUG:
     print(f"\nSim Config:")
@@ -333,6 +352,7 @@ num_trials_max = 10000000
 # Non-constants
 g_cards = [52] * 23
 g_card_toggle = 52
+g_hand_num = 0
 g_simulation_history = []
 # -----------------------------------------------------------------------------
 
@@ -442,13 +462,13 @@ h_win_label = ttk.Label(h_root_frame, text="Win %", relief=label_relief_default,
 width=results_label_width, padding=label_padding_default, background=results_label_color, anchor='center')
 h_win_result = ttk.Label(h_root_frame, textvariable=win_pct, relief=result_relief, width=results_label_width,
 padding=label_padding_default, anchor='center')
-h_tie_label = ttk.Label(h_root_frame, text="Tie %", relief=label_relief_default,
-width=results_label_width, padding=label_padding_default, background=results_label_color, anchor='center')
-h_tie_result = ttk.Label(h_root_frame, textvariable=tie_pct, relief=result_relief, width=results_label_width,
-padding=label_padding_default, anchor='center')
 h_lose_label = ttk.Label(h_root_frame, text="Lose %", relief=label_relief_default,
 width=results_label_width, padding=label_padding_default, background=results_label_color, anchor='center')
 h_lose_result = ttk.Label(h_root_frame, textvariable=lose_pct, relief=result_relief, width=results_label_width,
+padding=label_padding_default, anchor='center')
+h_tie_label = ttk.Label(h_root_frame, text="Tie %", relief=label_relief_default,
+width=results_label_width, padding=label_padding_default, background=results_label_color, anchor='center')
+h_tie_result = ttk.Label(h_root_frame, textvariable=tie_pct, relief=result_relief, width=results_label_width,
 padding=label_padding_default, anchor='center')
 h_trials_label = ttk.Label(h_root_frame, text="# of Trials", relief=label_relief_default,
 width=trials_label_width, padding=label_padding_default, background=option_label_color, anchor='center')
@@ -477,10 +497,10 @@ for card in range(1,6):
   exec(f"h_com_c{card}_lbl.place(x=x, y=com_start[1] + card_y_lbl_offset)")
 h_win_label.place(x=results_start[0], y=results_start[1])
 h_win_result.place(x=results_start[0] + results_x_space, y=results_start[1])
-h_tie_label.place(x=results_start[0], y=results_start[1] + result_y_space)
-h_tie_result.place(x=results_start[0] + results_x_space, y=results_start[1] + result_y_space)
-h_lose_label.place(x=results_start[0], y=results_start[1] + 2 * result_y_space)
-h_lose_result.place(x=results_start[0] + results_x_space, y=results_start[1] + 2 * result_y_space)
+h_lose_label.place(x=results_start[0], y=results_start[1] + result_y_space)
+h_lose_result.place(x=results_start[0] + results_x_space, y=results_start[1] + result_y_space)
+h_tie_label.place(x=results_start[0], y=results_start[1] + 2 * result_y_space)
+h_tie_result.place(x=results_start[0] + results_x_space, y=results_start[1] + 2 * result_y_space)
 h_trials_label.place(x=trials_start[0], y=trials_start[1])
 h_trials_entry.place(x=trials_start[0]+1, y=trials_start[1] + result_y_space)
 h_num_opp_label.place(x=num_opp_start[0], y=num_opp_start[1])
