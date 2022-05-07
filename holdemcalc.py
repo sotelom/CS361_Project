@@ -184,7 +184,7 @@ def run_load(*args):
   num_opp.set(num_opponents)
   win_pct.set("------")
   tie_pct.set("------")
-  lose_pct.set("------")
+  loss_pct.set("------")
   plot_pct_history.set(calc_percentages)
   # Clear unused players
   update_num_opp()
@@ -202,21 +202,19 @@ def run_load(*args):
 
 def run_report(*args):
   for e in g_simulation_history:
-    print(f"Hand #{e['hand_num']}")
-    print(f"  Player Hand = ({CARD_INT_TO_STR[e['player_cards'][0]]}, "
-          f"{CARD_INT_TO_STR[e['player_cards'][1]]})")
+    print(f"Hand #{e['sim_number']}")
+    print(f"  # of trials = {e['num_trials']}")
+    print(f"  Player Hand = ({e['user_cards']['1']}, {e['user_cards']['2']})")
     print(f"  Opponent Hands = ", end='')
-    for i in range(e['num_opponents']):
-      if i != e['num_opponents'] - 1:
-        print(f"({CARD_INT_TO_STR[e['opponent_cards'][2 * i]]}, {CARD_INT_TO_STR[e['opponent_cards'][2 * i + 1]]}), ", end='')
+    for i in range(1, int(e['num_opponents']) + 1):
+      if i != int(e['num_opponents']):
+        print(f"({e['opponent_cards'][str(i)]['1']}, {e['opponent_cards'][str(i)]['2']}), ", end='')
       else:
-        print(f"({CARD_INT_TO_STR[e['opponent_cards'][2 * i]]}, {CARD_INT_TO_STR[e['opponent_cards'][2 * i + 1]]})")
-    print(f"  Board Cards = ({CARD_INT_TO_STR[e['board_cards'][0]]}, "
-          f"{CARD_INT_TO_STR[e['board_cards'][2]]}, {CARD_INT_TO_STR[e['board_cards'][2]]}, "
-          f"{CARD_INT_TO_STR[e['board_cards'][3]]}, {CARD_INT_TO_STR[e['board_cards'][4]]})")
-    print(f"  # of trials = {e['num_runs']}")
+        print(f"({e['opponent_cards'][str(i)]['1']}, {e['opponent_cards'][str(i)]['2']})")
+    print(f"  Board Cards = ({e['community_cards']['1']}, {e['community_cards']['2']}, "
+          f"{e['community_cards']['3']}, {e['community_cards']['4']}, {e['community_cards']['5']})")
     print(f"  Win %  = {e['win_pct']}")
-    print(f"  Lose % = {e['lose_pct']}")
+    print(f"  Loss % = {e['loss_pct']}")
     print(f"  Tie %  = {e['tie_pct']}\n")
 
 def get_simulation_setup(sim_config):
@@ -232,7 +230,7 @@ def get_simulation_setup(sim_config):
   sim_config['calc_percentages'] = calc_percentages
 
 def run_simulation(*args):
-  global g_cards, g_simulation_history, g_hand_num
+  global g_cards, g_simulation_history, g_sim_num
   # Check all simulation parameters
   num_runs = num_trials.get()
   if len(num_runs) ==0:
@@ -267,7 +265,7 @@ def run_simulation(*args):
   fh.close()
   win_pct.set(f"{float(results[0]) * 100:.2f}")
   tie_pct.set(f"{float(results[1]) * 100:.2f}")
-  lose_pct.set(f"{float(results[2]) * 100:.2f}")
+  loss_pct.set(f"{float(results[2]) * 100:.2f}")
   if plot_pct_history.get() == '1':
     dtype = np.dtype('f4')
     with open(calculator_percent_fname, 'rb') as f:
@@ -304,15 +302,24 @@ def run_simulation(*args):
     fig.canvas.draw()
     fig.canvas.flush_events()
   # Save simulation in history list for report
-  g_hand_num += 1
-  sim_config['hand_num'] = g_hand_num
-  sim_config['player_cards'] = g_cards[:2]
-  sim_config['opponent_cards'] = g_cards[2:2 * (sim_config['num_opponents'] + 1)]
-  sim_config['board_cards'] = g_cards[18:23]
-  sim_config['win_pct'] = win_pct.get()
-  sim_config['tie_pct'] = tie_pct.get()
-  sim_config['lose_pct'] = lose_pct.get()
-  g_simulation_history.append(sim_config)
+  g_sim_num += 1
+  sim_history = dict()
+  sim_history['sim_number'] = g_sim_num
+  sim_history['num_trials'] = num_trials.get()
+  sim_history['num_opponents'] = num_opp.get()
+  sim_history['user_cards'] = {'1': CARD_INT_TO_STR2[g_cards[0]], '2': CARD_INT_TO_STR2[g_cards[1]]}
+  sim_history['opponent_cards'] = dict()
+  for op in range(1,int(num_opp.get()) + 1):
+    sim_history['opponent_cards'][str(op)] = {'1': CARD_INT_TO_STR2[g_cards[2 * op]], '2': CARD_INT_TO_STR2[g_cards[2 * op + 1]]}
+  sim_history['community_cards'] = {'1': CARD_INT_TO_STR2[g_cards[2 * 9]],
+                                    '2': CARD_INT_TO_STR2[g_cards[2 * 9 + 1]],
+                                    '3': CARD_INT_TO_STR2[g_cards[2 * 9 + 2]],
+                                    '4': CARD_INT_TO_STR2[g_cards[2 * 9 + 3]],
+                                    '5': CARD_INT_TO_STR2[g_cards[2 * 9 + 4]]}
+  sim_history['win_pct'] = win_pct.get()
+  sim_history['tie_pct'] = tie_pct.get()
+  sim_history['loss_pct'] = loss_pct.get()
+  g_simulation_history.append(sim_history)
   #DEBUG
   if DEBUG:
     print(f"\nSim Config:")
@@ -331,15 +338,25 @@ def run_simulation(*args):
 # Global variables ------------------------------------------------------------
 DEBUG = 0
 CARD_INT_TO_STR = {
-                    0: ' 2C',  1: '3C',  2: '4C',  3: '5C',  4: '6C',  5: '7C',
-                    6: '8C',  7: '9C',  8: '10C',  9: 'JC', 10: 'QC', 11: 'KC', 12: 'AC',
-                    13: '2D', 14: '3D', 15: '4D', 16: '5D', 17: '6D', 18: '7D',
+                    0:  '2C',  1: '3C',  2: '4C',   3: '5C',  4: '6C',  5: '7C',
+                    6:  '8C',  7: '9C',  8: '10C',  9: 'JC', 10: 'QC', 11: 'KC', 12: 'AC',
+                    13: '2D', 14: '3D', 15: '4D',  16: '5D', 17: '6D', 18: '7D',
                     19: '8D', 20: '9D', 21: '10D', 22: 'JD', 23: 'QD', 24: 'KD', 25: 'AD',
-                    26: '2H', 27: '3H', 28: '4H', 29: '5H', 30: '6H', 31: '7H',
+                    26: '2H', 27: '3H', 28: '4H',  29: '5H', 30: '6H', 31: '7H',
                     32: '8H', 33: '9H', 34: '10H', 35: 'JH', 36: 'QH', 37: 'KH', 38: 'AH',
-                    39: '2S', 40: '3S', 41: '4S', 42: '5S', 43: '6S', 44: '7S',
+                    39: '2S', 40: '3S', 41: '4S',  42: '5S', 43: '6S', 44: '7S',
                     45: '8S', 46: '9S', 47: '10S', 48: 'JS', 49: 'QS', 50: 'KS', 51: 'AS', 52: '?'
                   }
+CARD_INT_TO_STR2 = {
+                    0:  '2 of C',  1: '3 of C',  2:  '4 of C',  3: '5 of C',  4: '6 of C',  5: '7 of C',
+                    6:  '8 of C',  7: '9 of C',  8: '10 of C',  9: 'J of C', 10: 'Q of C', 11: 'K of C', 12: 'A of C',
+                    13: '2 of D', 14: '3 of D', 15:  '4 of D', 16: '5 of D', 17: '6 of D', 18: '7 of D',
+                    19: '8 of D', 20: '9 of D', 21: '10 of D', 22: 'J of D', 23: 'Q of D', 24: 'K of D', 25: 'A of D',
+                    26: '2 of H', 27: '3 of H', 28:  '4 of H', 29: '5 of H', 30: '6 of H', 31: '7 of H',
+                    32: '8 of H', 33: '9 of H', 34: '10 of H', 35: 'J of H', 36: 'Q of H', 37: 'K of H', 38: 'A of H',
+                    39: '2 of S', 40: '3 of S', 41:  '4 of S', 42: '5 of S', 43: '6 of S', 44: '7 of S',
+                    45: '8 of S', 46: '9 of S', 47: '10 of S', 48: 'J of S', 49: 'Q of S', 50: 'K of S', 51: 'A of S', 52: '?'
+                   }
 calculator_input_fname = "input.txt"
 calculator_results_fname = "calcResults.txt"
 calculator_percent_fname = "calcPercents.dat"
@@ -352,7 +369,7 @@ num_trials_max = 10000000
 # Non-constants
 g_cards = [52] * 23
 g_card_toggle = 52
-g_hand_num = 0
+g_sim_num = 0
 g_simulation_history = []
 # -----------------------------------------------------------------------------
 
@@ -432,7 +449,7 @@ num_trials.trace_add("write", check_num_trials)
 num_opp = StringVar(value=initial_num_opp)
 win_pct = StringVar(value="------")
 tie_pct = StringVar(value="------")
-lose_pct = StringVar(value="------")
+loss_pct = StringVar(value="------")
 plot_pct_history = StringVar(value=1)
 
 # Player card widgets
@@ -463,15 +480,15 @@ for card in range(1,6):
 h_win_label = ttk.Label(h_root_frame, text="Win %", relief=label_relief_default,
 width=results_label_width, padding=label_padding_default, background=results_label_color, anchor='center')
 h_win_result = ttk.Label(h_root_frame, textvariable=win_pct, relief=result_relief, width=results_label_width,
-padding=label_padding_default, anchor='center')
-h_lose_label = ttk.Label(h_root_frame, text="Lose %", relief=label_relief_default,
+padding=label_padding_default, anchor='center', background="#eeeeee")
+h_loss_label = ttk.Label(h_root_frame, text="Loss %", relief=label_relief_default,
 width=results_label_width, padding=label_padding_default, background=results_label_color, anchor='center')
-h_lose_result = ttk.Label(h_root_frame, textvariable=lose_pct, relief=result_relief, width=results_label_width,
-padding=label_padding_default, anchor='center')
+h_loss_result = ttk.Label(h_root_frame, textvariable=loss_pct, relief=result_relief, width=results_label_width,
+padding=label_padding_default, anchor='center', background="#eeeeee")
 h_tie_label = ttk.Label(h_root_frame, text="Tie %", relief=label_relief_default,
 width=results_label_width, padding=label_padding_default, background=results_label_color, anchor='center')
 h_tie_result = ttk.Label(h_root_frame, textvariable=tie_pct, relief=result_relief, width=results_label_width,
-padding=label_padding_default, anchor='center')
+padding=label_padding_default, anchor='center', background="#eeeeee")
 h_trials_label = ttk.Label(h_root_frame, text="# of Trials", relief=label_relief_default,
 width=trials_label_width, padding=label_padding_default, background=option_label_color, anchor='center')
 h_trials_entry = ttk.Entry(h_root_frame, textvariable=num_trials, justify='right', width=trials_label_width+1)
@@ -499,8 +516,8 @@ for card in range(1,6):
   exec(f"h_com_c{card}_lbl.place(x=x, y=com_start[1] + card_y_lbl_offset)")
 h_win_label.place(x=results_start[0], y=results_start[1])
 h_win_result.place(x=results_start[0] + results_x_space, y=results_start[1])
-h_lose_label.place(x=results_start[0], y=results_start[1] + result_y_space)
-h_lose_result.place(x=results_start[0] + results_x_space, y=results_start[1] + result_y_space)
+h_loss_label.place(x=results_start[0], y=results_start[1] + result_y_space)
+h_loss_result.place(x=results_start[0] + results_x_space, y=results_start[1] + result_y_space)
 h_tie_label.place(x=results_start[0], y=results_start[1] + 2 * result_y_space)
 h_tie_result.place(x=results_start[0] + results_x_space, y=results_start[1] + 2 * result_y_space)
 h_trials_label.place(x=trials_start[0], y=trials_start[1])
