@@ -9,7 +9,7 @@
 #include <cstdlib>
 #include <ctime>
 using namespace std;
-#define DEBUG 0
+#define DEBUG 1
 #define RAND_CARD_VALUE 52
 
 const char *inFileName  = "input.txt";
@@ -266,14 +266,14 @@ int main()
                 {
                     if (playerHandStatus[i].rank == playerHandStatus[0].rank)
                     {
-                        // If player wins at least one tie then we know he won the hand,
+                        // Player must win all tie breaks to win the hand or else its a tie,
                         // because we would have caught the tie break loss above
-                        if (PlayerTieWon(playerHandStatus[0], playerHandStatus[i]))
+                        if (!PlayerTieWon(playerHandStatus[0], playerHandStatus[i]))
                         {
-                            // Player Won
-                            handOutcome = HandOutcome::WON;
+                            // Player tied at least one other player, so end result must be tie
+                            handOutcome = HandOutcome::TIE;
 #if DEBUG
-                            cout << "Player Won\n";
+                            cout << "Player Tied\n";
                             cout << "\tPlayer Hand Status:      rank = " << static_cast<int>(playerHandStatus[0].rank) << ", kickers = ("
                                 << playerHandStatus[0].kickers[0] << ", "
                                 << playerHandStatus[0].kickers[1] << ", "
@@ -290,24 +290,24 @@ int main()
                                     << playerHandStatus[o].kickers[4] << ")\n";
                             }
 #endif
-                            ++winCount;
+                            ++tieCount;
                             if (calcPercentages)
                             {
-                                winPercent[handNum]  = winCount  / denom;
-                                tiePercent[handNum]  = tieCount  / denom;
+                                winPercent[handNum] = winCount / denom;
+                                tiePercent[handNum] = tieCount / denom;
                                 lossPercent[handNum] = lossCount / denom;
-                            }
+                            }                            
                             break;
                         }
                     }
                 }
-                // If player didn't break any ties then he must have tied
-                if (handOutcome != HandOutcome::WON)
+                // If player didn't tie anyone else, they must have won
+                if (handOutcome != HandOutcome::TIE)
                 {
-                    // Player Tied
-                    handOutcome = HandOutcome::TIE;
+                    // Player Won
+                    handOutcome = HandOutcome::WON;
 #if DEBUG
-                    cout << "Player Tied\n";
+                    cout << "Player Won\n";
                     cout << "\tPlayer Hand Status:      rank = " << static_cast<int>(playerHandStatus[0].rank) << ", kickers = ("
                         << playerHandStatus[0].kickers[0] << ", "
                         << playerHandStatus[0].kickers[1] << ", "
@@ -324,11 +324,11 @@ int main()
                             << playerHandStatus[o].kickers[4] << ")\n";
                     }
 #endif
-                    ++tieCount;
+                    ++winCount;
                     if (calcPercentages)
                     {
-                        winPercent[handNum]  = winCount  / denom;
-                        tiePercent[handNum]  = tieCount  / denom;
+                        winPercent[handNum] = winCount / denom;
+                        tiePercent[handNum] = tieCount / denom;
                         lossPercent[handNum] = lossCount / denom;
                     }
                 }
