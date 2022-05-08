@@ -620,24 +620,24 @@ bool PlayerTieWon(const HandStatus &playerHandStatus, const HandStatus &opponent
 }
 
 
-bool _containsStraight(vector<int> &vValues, int &kicker)
+bool _containsStraight(vector<int> &uValues, int &kicker)
 {
     // Look for 5 card consecutive sequences starting with highest card
-    // vector of values is sorted in descending order
+    // unique vector of values is sorted in descending order
     int numToCheck, i, j, startVal;
 
     // If ace is in vValues add it as the lowest card too
-    if (vValues[0] == 12)
-        vValues.push_back(-1);
-    numToCheck = vValues.size() - 4;
+    if (uValues[0] == 12)
+        uValues.push_back(-1);
+    numToCheck = uValues.size() - 4;
     i = 0;
     while (i < numToCheck)
     {
         // Get starting card
-        startVal = vValues[i];
+        startVal = uValues[i];
         for (j = 1; j < 5; ++j)
         {
-            if (vValues[i + j] != startVal - j)
+            if (uValues[i + j] != startVal - j)
                 break;
             if (j == 4)
             {
@@ -653,12 +653,16 @@ bool _containsStraight(vector<int> &vValues, int &kicker)
 
 bool _isStraight(const Card *hand, HandStatus &handStatus)
 {
-    vector<int> vValues;
-    // Put values in a vector and sort in descending order
+    vector<int> uValues;
+    // Put only unique values in a vector and sort in descending order
     for (int i = 0; i < 7; ++i)
-        vValues.push_back(hand[i].value);
-    sort(vValues.begin(), vValues.end(), greater<int>());
-    if (_containsStraight(vValues, handStatus.kickers[0]))
+    {   if (find(uValues.begin(), uValues.end(), hand[i].value) == uValues.end())
+        {   // Element not found in unique value list
+            uValues.push_back(hand[i].value);
+        }            
+    }        
+    sort(uValues.begin(), uValues.end(), greater<int>());
+    if (_containsStraight(uValues, handStatus.kickers[0]))
     {
         handStatus.rank = HandRank::STRAIGHT;
         return true;
