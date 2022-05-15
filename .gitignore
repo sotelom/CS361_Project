@@ -127,3 +127,22 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Visual Studio
+Calculator/.vs/
+Calculator/Debug/
+Calculator/Release/
+Calculator/Calculator/Debug/
+Calculator/Calculator/Release/
+Calculator/.vs/Calculator/v16/.suo
+Calculator/.vs/Calculator/v16/Browse.VC.db
+Calculator/.vs/Calculator/v16/ipch/AutoPCH/41e820e71c0cdf1/MAIN.ipch
+Calculator/Calculator/Debug/Calculator.tlog/CL.read.1.tlog
+Calculator/Calculator/Debug/Calculator.tlog/link.read.1.tlog
+Calculator/Calculator/Debug/Calculator.tlog/link.write.1.tlog
+Calculator/Calculator/Debug/vc142.pdb
+Calculator/Calculator/Debug/vc142.idb
+Calculator/Calculator/Debug/main.obj
+Calculator/Debug/Calculator.exe
+Calculator/Debug/Calculator.ilk
+Calculator/Debug/Calculator.pdb
