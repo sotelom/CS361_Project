@@ -11,6 +11,7 @@ from tkinter import messagebox
 from tkinter import simpledialog
 from tkinter import filedialog
 from PIL import Image, ImageTk
+import requests
 
 
 # Functions -------------------------------------------------------------------
@@ -201,21 +202,26 @@ def run_load(*args):
     exec(f"h_com_c{card_pos}_lbl['image'] = c{card}_img")
 
 def run_report(*args):
-  for e in g_simulation_history:
-    print(f"Hand #{e['sim_number']}")
-    print(f"  # of trials = {e['num_trials']}")
-    print(f"  Player Hand = ({e['user_cards']['1']}, {e['user_cards']['2']})")
-    print(f"  Opponent Hands = ", end='')
-    for i in range(1, int(e['num_opponents']) + 1):
-      if i != int(e['num_opponents']):
-        print(f"({e['opponent_cards'][str(i)]['1']}, {e['opponent_cards'][str(i)]['2']}), ", end='')
-      else:
-        print(f"({e['opponent_cards'][str(i)]['1']}, {e['opponent_cards'][str(i)]['2']})")
-    print(f"  Board Cards = ({e['community_cards']['1']}, {e['community_cards']['2']}, "
-          f"{e['community_cards']['3']}, {e['community_cards']['4']}, {e['community_cards']['5']})")
-    print(f"  Win %  = {e['win_pct']}")
-    print(f"  Loss % = {e['loss_pct']}")
-    print(f"  Tie %  = {e['tie_pct']}\n")
+  headers = {"Content-Type": "application/json"}
+  res = requests.post(API, json=g_simulation_history, headers=headers)
+  fh = open(REPORT_FNAME, 'w')
+  fh.write(res.text)
+  fh.close()
+  os.system(f"start {REPORT_FNAME}")
+  # for e in g_simulation_history:
+  #   print(f"Hand #{e['sim_number']}")
+  #   print(f"  # of trials = {e['num_trials']}")
+  #   print(f"  Player Hand = ({e['user_cards']})")
+  #   print(f"  Opponent Hands = ", end='')
+  #   for i in range(0, int(e['num_opponents'])):
+  #     if i != int(e['num_opponents']) - 1:
+  #       print(f"({e['opponent_cards'][i]}), ", end='')
+  #     else:
+  #       print(f"({e['opponent_cards'][i]})")
+  #   print(f"  Board Cards = ({e['community_cards']})")
+  #   print(f"  Win %  = {e['win_pct']}")
+  #   print(f"  Loss % = {e['loss_pct']}")
+  #   print(f"  Tie %  = {e['tie_pct']}\n")
 
 def get_simulation_setup(sim_config):
   num_runs = num_trials.get()
@@ -307,15 +313,11 @@ def run_simulation(*args):
   sim_history['sim_number'] = g_sim_num
   sim_history['num_trials'] = num_trials.get()
   sim_history['num_opponents'] = num_opp.get()
-  sim_history['user_cards'] = {'1': CARD_INT_TO_STR2[g_cards[0]], '2': CARD_INT_TO_STR2[g_cards[1]]}
-  sim_history['opponent_cards'] = dict()
+  sim_history['user_cards'] = g_cards[0:2]
+  sim_history['opponent_cards'] = []
   for op in range(1,int(num_opp.get()) + 1):
-    sim_history['opponent_cards'][str(op)] = {'1': CARD_INT_TO_STR2[g_cards[2 * op]], '2': CARD_INT_TO_STR2[g_cards[2 * op + 1]]}
-  sim_history['community_cards'] = {'1': CARD_INT_TO_STR2[g_cards[2 * 9]],
-                                    '2': CARD_INT_TO_STR2[g_cards[2 * 9 + 1]],
-                                    '3': CARD_INT_TO_STR2[g_cards[2 * 9 + 2]],
-                                    '4': CARD_INT_TO_STR2[g_cards[2 * 9 + 3]],
-                                    '5': CARD_INT_TO_STR2[g_cards[2 * 9 + 4]]}
+    sim_history['opponent_cards'].append(g_cards[2 * op:2 * (op + 1)])
+  sim_history['community_cards'] = g_cards[2 * 9:2 * 9 + 5]
   sim_history['win_pct'] = win_pct.get()
   sim_history['tie_pct'] = tie_pct.get()
   sim_history['loss_pct'] = loss_pct.get()
@@ -337,6 +339,8 @@ def run_simulation(*args):
 
 # Global variables ------------------------------------------------------------
 DEBUG = 0
+API = "https://showboat-rest-api.herokuapp.com/report-generator"
+REPORT_FNAME = "Report.html"
 CARD_INT_TO_STR = {
                     0:  '2C',  1: '3C',  2: '4C',   3: '5C',  4: '6C',  5: '7C',
                     6:  '8C',  7: '9C',  8: '10C',  9: 'JC', 10: 'QC', 11: 'KC', 12: 'AC',
