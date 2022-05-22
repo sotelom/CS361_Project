@@ -135,3 +135,6 @@ Calculator/Release/
 Calculator/Calculator/Debug/
 Calculator/Calculator/Release/
 
+calcResults.txt
+input.txt
+Report.html
