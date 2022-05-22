@@ -138,3 +138,11 @@ Calculator/Calculator/Release/
 calcResults.txt
 input.txt
 Report.html
+Calculator.exe
+Report.html
+ReportEx.html
+Calculator/Calculator.sln
+Calculator/Calculator/Calculator.vcxproj
+Calculator/Calculator/Calculator.vcxproj.user
+Calculator/Calculator/Calculator.vcxproj.filters
+Calculator/Calculator.sln
