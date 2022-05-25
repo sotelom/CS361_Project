@@ -15,97 +15,136 @@ import requests
 
 
 # Functions -------------------------------------------------------------------
-def cancel_card(*args, h_win):
-  h_win.destroy()
 
 def submit_card(*args, h_win, player, card_pos):
+  """Callback for submit button in the card select popup window
+  *args = arguments passed by tkinter
+  h_win = handle to card selection window
+  player = index of player selecting the card
+  card_pos = index representing which card of the player or community cards
+  Function will update the global card list to reflect the card selected, the
+  player index and card index will determine which card in the list to update
+  """
   global g_cards
-  current_card_index = 2 * player + card_pos - 1 if player != -1 else 2 * 9 + card_pos - 1
   # Update the cards list with the last toggled card state
+  current_card_index = 2 * player + card_pos - 1 if player != -1 else 2 * 9 + card_pos - 1
   g_cards[current_card_index] = g_card_toggle
-  # Change players card image in main GUI to the new card
+  # Change player's or community card image in main GUI to the new card
   if player == -1:
-    label_handle = f"h_com_c{card_pos}_lbl"
+    label_handle = eval(f"h_com_c{card_pos}_lbl")
   else:
-    label_handle = f"h_p{player}_c{card_pos}_lbl"
-  exec(f"{label_handle}['image'] = c{g_card_toggle}_img")
+    label_handle = eval(f"h_p{player}_c{card_pos}_lbl")
+  label_handle['image'] = eval(f"c{g_card_toggle}_img")
   h_win.destroy()
 
+
 def toggle_card(*args, card, player, card_pos, card_handles):
+  """Callback for submit button in the card select popup window
+  *args = arguments passed by tkinter
+  card = is the value of card that was clicked
+  player = index of player selecting the card
+  card_pos = index representing which card of the player or community cards
+  card_handles = a list of label handles of the 52 cards in the selection popup window
+  Function will respond to the user left clicking event on one of the card label
+  images in the popup window. If user selects or deselects a card the global
+  variable g_card_toggle will be updated accordingly, once the user presses
+  submit this g_card_toggle variable will be use to assign to the global card
+  list
+  """
   global g_card_toggle
+  # Check if user re-selected the same card or if it is a new selection
   if card == g_card_toggle:
-    # They unselcted their card, change background and update g_card_toggle
-    exec(f"card_handles[{card}]['background'] = '#ffffff'")
+    # They re-selected their card, which means unselect and set to random
+    card_handles[card]['background'] = '#ffffff'
     g_card_toggle = 52
   else:
-    # They picked a new card, if their previous card wasn't random,
-    # unselect it and then select the new card
+    # They picked a new card, if their previous card wasn't random, unselect it
     if g_card_toggle != 52:
-      exec(f"card_handles[{g_card_toggle}]['background'] = '#ffffff'")
+      card_handles[g_card_toggle]['background'] = '#ffffff'
     # Select the new card by highlighting it and setting g_card_toggle
-    exec(f"card_handles[{card}]['background'] = '#33ff33'")
+    card_handles[card]['background'] = '#33ff33'
     g_card_toggle = card
 
+
 def choose_card(*args, player, card_pos):
+  """Callback for left click event on a card in main GUI window
+  *args = arguments passed by tkinter
+  player = index of player selecting the card
+  card_pos = index representing which card of the player or community cards
+  Function will launch a popup card selection window to allow user to select
+  or unselect their cards, uses global variables g_card_toggle and g_cards
+  """
   global g_cards, g_card_toggle
+  # Initialize g_card_toggle to the currently selected card from the global list
   current_card_index = 2 * player + card_pos - 1 if player != -1 else 2 * 9 + card_pos - 1
   g_card_toggle = g_cards[current_card_index]
+  # Get list of all cards that are chosen to make them blank in the popup
   chosen_cards = g_cards[:]
   del chosen_cards[current_card_index]
+  # Create popup winddow
   card_xspace = 70
   card_yspace = 95
   win_width = card_xspace * 13
   win_height = card_yspace * 4 + 60
-  # Create popup winddow
   popup = Toplevel(h_root)
   popup.geometry(f"{win_width}x{win_height}")
   popup.geometry(f"+{h_root.winfo_rootx()+main_window_width//2-win_width//2}"
                  f"+{h_root.winfo_rooty()+main_window_height//2-win_height//2}")
-  # Create card labels and bind click callback to them
+  # Create card labels and bind click callback to them if available to select
   card_handles = []
   for card in range(52):
-    exec(f"h_c{card}_lbl = ttk.Label(popup,image=c{card}_img, padding='5 5 5 5', relief='groove')")
-    eval(f"card_handles.append(h_c{card}_lbl)")
-    eval(f"h_c{card}_lbl.place(x={(card%13)*card_xspace}, y={(card//13)*card_yspace})")
+    card_handles.append(eval(f"ttk.Label(popup,image=c{card}_img, padding='5 5 5 5', relief='groove')"))
+    card_handles[card].place(x=(card%13)*card_xspace, y=(card//13)*card_yspace)
     # If card selected in main GUI is one of the 52, then highlight it in picker window
     if card == g_card_toggle:
-      exec(f"h_c{card}_lbl['background'] = '#33ff33'")
+      card_handles[card]['background'] = '#33ff33'
     # If card is in chosen_card list then remove its image and unbind the callback, else bind callback
     if card in chosen_cards:
-      eval(f"h_c{card}_lbl.unbind('<Button-1>')")
-      exec(f"h_c{card}_lbl['image'] = cNone_img")
+      card_handles[card].unbind('<Button-1>')
+      card_handles[card]['image'] = cNone_img
     else:
-      eval(f"h_c{card}_lbl.bind('<Button-1>', partial(toggle_card,card={card}, "
-           f"player=player, card_pos=card_pos, card_handles=card_handles))")
-  # Create submit and cancel buttons
+      card_handles[card].bind('<Button-1>',
+      partial(toggle_card, card=card, player=player, card_pos=card_pos, card_handles=card_handles))
+  # Create submit and cancel buttons for popup
   ttk.Button(popup, text="Submit", padding="6 6 6 6", \
     command=partial(submit_card, h_win=popup, player=player, card_pos=card_pos)).place(x=win_width//2-100,y=win_height-50)
   ttk.Button(popup, text="Cancel", padding="6 6 6 6", \
-    command=partial(cancel_card, h_win=popup)).place(x=win_width//2-0,y=win_height-50)
+    command=lambda h_win=popup: h_win.destroy()).place(x=win_width//2-0,y=win_height-50)
   # Block main window callbacks until popup is closed
   popup.grab_set()
 
+
 def update_num_opp(*args):
+  """Callback for drop-down list to set the # of opponents
+  *args = arguments passed by tkinter
+  Function erase or add the necessary amount of opponents based
+  on the number selected in the drop-down, uses g_cards to keep track of all cards
+  """
   global g_cards
   no = int(num_opp.get())
   # Show all players up to num_opp
   for player in range(no + 1):
-    exec(f"h_p{player}_label.place(x=p{player}_start[0], y=p{player}_start[1])")
-    exec(f"h_p{player}_c1_lbl.place(x=p{player}_start[0], y=p{player}_start[1] + card_y_lbl_offset)")
-    exec(f"h_p{player}_c2_lbl.place(x=p{player}_start[0] + card_x_offset, y=p{player}_start[1] + card_y_lbl_offset)")
+    eval(f"h_p{player}_label.place(x=p{player}_start[0], y=p{player}_start[1])")
+    eval(f"h_p{player}_c1_lbl.place(x=p{player}_start[0], y=p{player}_start[1] + card_y_lbl_offset)")
+    eval(f"h_p{player}_c2_lbl.place(x=p{player}_start[0] + card_x_offset, y=p{player}_start[1] + card_y_lbl_offset)")
   # Hide all players above num_opp and and set their cards to random
   for player in range(no + 1, 9):
     # Hide player label
-    exec(f"h_p{player}_label.place_forget()")
-    # Hide player cards and return to deck if necessary
+    eval(f"h_p{player}_label.place_forget()")
+    # Hide player cards and set card to random
     for card_pos in range(1, 3):
-      # Hide card label and change image to random
-      exec(f"h_p{player}_c{card_pos}_lbl.place_forget()")
+      eval(f"h_p{player}_c{card_pos}_lbl.place_forget()")
       exec(f"h_p{player}_c{card_pos}_lbl['image'] = c52_img")
-      # Make card random since no longer in game
       g_cards[2 * player + card_pos - 1] = 52
 
+
 def check_num_trials(*args):
+  """Callback for text entry box for the # of trials to run
+  *args = arguments passed by tkinter
+  Function will check the entry typed in the box, if not a valid
+  integer >0 and <=num_trials_max then an error message is displayed
+  and # of trials is set to 5000
+  """
   entry = num_trials.get()
   if len(entry) !=0 and not num_trials.get().isnumeric():
     messagebox.showerror(title="Bad Input", message="# of Trials must be a positive integer.")
@@ -113,7 +152,13 @@ def check_num_trials(*args):
   elif len(entry) !=0 and int(entry) > num_trials_max:
     num_trials.set(value=num_trials_max)
 
+
 def clear_all_cards(*args):
+  """Callback for clear cards button
+  *args = arguments passed by tkinter
+  Function will iterate through player and community cards and set all
+  cards back to random, making all cards available to choose from
+  """
   global g_cards
   num_players = int(num_opp.get()) + 1
   # Clear fixed cards for players
@@ -130,14 +175,26 @@ def clear_all_cards(*args):
     # Set card label image to random
     exec(f"h_com_c{card_pos}_lbl['image'] = c52_img")
 
+
 def is_valid_fname(fname):
-  if re.search(r'[^A-Za-z0-9_ \-\\]', fname):
+  """Function to validate a filename entry
+  fname = string representing entered filename
+  Function will check filenames to be alphanumeric with underscore,
+  space, or dash and return a boolean
+  """
+  if re.search(r'[^A-Za-z0-9_ \-]', fname):
     messagebox.showerror(title="Error", message="Illegal Filename!")
     return False
   else:
     return True
 
+
 def run_save(*args):
+  """Callback for save button
+  *args = arguments passed by tkinter
+  Function will collect all the simulation configuration info, prompt
+  user for a filename, and if valid will store it in the ./Save directory
+  """
   sim_config = dict()
   get_simulation_setup(sim_config)
   # Get filename
@@ -157,7 +214,13 @@ def run_save(*args):
   fh.write(f"{' '.join([str(e) for e in g_cards[18:23]])}\n")
   fh.close()
 
+
 def run_load(*args):
+  """Callback for load button
+  *args = arguments passed by tkinter
+  Function will read in the simulation configuration settings from a .sim file
+  and apply all the settings to the main GUI
+  """
   global g_cards
   sim_config = dict()
   # Choose file to load
@@ -201,29 +264,26 @@ def run_load(*args):
     # Set card image
     exec(f"h_com_c{card_pos}_lbl['image'] = c{card}_img")
 
+
 def run_report(*args):
+  """Callback for report button
+  *args = arguments passed by tkinter
+  Function will make an API call to teammates microservice and pass
+  a list of all the simulations performed while the application was open
+  the microservice will return an html file which is a formatted table of results
+  """
   headers = {"Content-Type": "application/json"}
   res = requests.post(API, json=g_simulation_history, headers=headers)
   fh = open(REPORT_FNAME, 'w')
   fh.write(res.text)
   fh.close()
   os.system(f"start {REPORT_FNAME}")
-  # for e in g_simulation_history:
-  #   print(f"Hand #{e['sim_number']}")
-  #   print(f"  # of trials = {e['num_trials']}")
-  #   print(f"  Player Hand = ({e['user_cards']})")
-  #   print(f"  Opponent Hands = ", end='')
-  #   for i in range(0, int(e['num_opponents'])):
-  #     if i != int(e['num_opponents']) - 1:
-  #       print(f"({e['opponent_cards'][i]}), ", end='')
-  #     else:
-  #       print(f"({e['opponent_cards'][i]})")
-  #   print(f"  Board Cards = ({e['community_cards']})")
-  #   print(f"  Win %  = {e['win_pct']}")
-  #   print(f"  Loss % = {e['loss_pct']}")
-  #   print(f"  Tie %  = {e['tie_pct']}\n")
+
 
 def get_simulation_setup(sim_config):
+  """Function to collect current simulation configuration
+  sim_config = dictionary to hold the simulation setting info
+  """
   num_runs = num_trials.get()
   if len(num_runs) ==0:
     num_runs = 5000
@@ -235,7 +295,16 @@ def get_simulation_setup(sim_config):
   sim_config['num_opponents'] = num_opponents
   sim_config['calc_percentages'] = calc_percentages
 
+
 def run_simulation(*args):
+  """Callback for run button
+  *args = arguments passed by tkinter
+  Function will write all the simulation configuration info to
+  a input file which is used by the simulation engine to perform
+  a monte carlo simulation to estimate win/loss/tie percentages
+  After results are returned the GUI and graphs are updated with
+  the simulation results
+  """
   global g_cards, g_simulation_history, g_sim_num
   # Check all simulation parameters
   num_runs = num_trials.get()
@@ -327,11 +396,10 @@ def run_simulation(*args):
     print(f"\nSim Config:")
     print(f"\t# of runs = {num_runs}")
     print(f"\t# of opponents = {sim_config['num_opponents']}")
-    print(f"\tDo Percentages = {sim_config['do_percentages']}")
+    print(f"\tDo Percentages = {sim_config['calc_percentages']}")
     for player in range(sim_config['num_opponents'] + 1):
-      g_cards = eval(f"sim_config['p{player}_cards']")
-      print(f"\tPlayer #{player} cards = ({cards[0]}, {cards[1]})")
-    cards = sim_config['com_cards']
+      print(f"\tPlayer #{player} cards = ({g_cards[2 * player]}, {g_cards[2 * player + 1]})")
+    cards = g_cards[2 * 9:2 * 9 + 5]
     print(f"\tCommunity cards = ({cards[0]}, {cards[1]},  {cards[2]}, {cards[3]}, {cards[4]})")
   #DEBUG
 #------------------------------------------------------------------------------
@@ -361,16 +429,16 @@ CARD_INT_TO_STR2 = {
                     39: '2 of S', 40: '3 of S', 41:  '4 of S', 42: '5 of S', 43: '6 of S', 44: '7 of S',
                     45: '8 of S', 46: '9 of S', 47: '10 of S', 48: 'J of S', 49: 'Q of S', 50: 'K of S', 51: 'A of S', 52: '?'
                    }
-calculator_input_fname = "input.txt"
+calculator_input_fname   = "input.txt"
 calculator_results_fname = "calcResults.txt"
 calculator_percent_fname = "calcPercents.dat"
 calculator_service_fname = "calcService.txt"
-sim_service_fname = "holdem_service.txt"
-com_player_num = -1
+sim_service_fname        = "holdem_service.txt"
+com_player_num  = -1
 initial_num_opp = 1
 num_trials_init = 5000
-num_trials_max = 10000000
-# Non-constants
+num_trials_max  = 10000000
+# Non-constant globals
 g_cards = [52] * 23
 g_card_toggle = 52
 g_sim_num = 0
@@ -448,6 +516,7 @@ cNone_img = Image.open(".\\CARDS\\None.jpg")
 cNone_img = eval(f"cNone_img.resize(({card_width}, {card_height}), Image.Resampling.LANCZOS)")
 cNone_img = ImageTk.PhotoImage(cNone_img)
 
+# GUI variables
 num_trials = StringVar(value=f"{num_trials_init}")
 num_trials.trace_add("write", check_num_trials)
 num_opp = StringVar(value=initial_num_opp)
