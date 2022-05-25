@@ -145,6 +145,5 @@ Calculator/Calculator/Calculator.vcxproj
 Calculator/Calculator/Calculator.vcxproj.user
 Calculator/Calculator/Calculator.vcxproj.filters
 Calculator/Calculator.sln
-static/style.css
 holdemcalc.py
 calcPercents.dat
