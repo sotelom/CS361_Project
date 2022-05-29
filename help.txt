@@ -1,0 +1,24 @@
+1. Select the # of opponents to play against using the drop-down in the bottom-left area.
+      a. 1 opponent minimum
+      b. 8 opponents maximum
+
+2. Left-click on any of the cards in the GUI to choose them as fixed for the simulation.
+      a. Any card left blank will be taken as randomly selcted during the simulation.
+      b. To reset a card back to random or select a new card, left-click again on that card
+         and selct a new card or de-select the currently selected card.
+
+3. Set the # of trials to perform the montecarlo simulation using the textbox in bottom-left corner.
+    a. Using a small # of trials (<1000) will result in high variance of results
+    b. Increasing the # of trials will result in lower variance but increase simulation time.
+    c. Toggle the "Plot % History" checkbox in bottom-left area to visualize the variance of the results.
+    
+4. Once simulation settings are configured, press the "Run" button to perform the simulation.
+    a. When simulation is complete the Win/Loss/Tie percentages should be updated and an optional graph will popup.
+
+5. To save a simulation press the "Save" button and enter a name for the file.
+
+6. To load a previously saved simulation press the "Load" button and select the desired file.
+
+7. To generate a report summary of all the hands simulated so far press the "Report" button.
+
+8. The "Clear Cards" button in the bottom-left area is a quick way to reset all cards to a random state.

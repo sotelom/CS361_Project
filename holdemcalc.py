@@ -27,23 +27,17 @@ def submit_card(*args, h_win, player, card_pos):
   """
   global g_cards
   # Update the cards list with the last toggled card state
-  current_card_index = 2 * player + card_pos - 1 if player != -1 else 2 * 9 + card_pos - 1
+  current_card_index = 2 * player + card_pos
   g_cards[current_card_index] = g_card_toggle
   # Change player's or community card image in main GUI to the new card
-  if player == -1:
-    label_handle = eval(f"h_com_c{card_pos}_lbl")
-  else:
-    label_handle = eval(f"h_p{player}_c{card_pos}_lbl")
-  label_handle['image'] = eval(f"c{g_card_toggle}_img")
+  g_card_labels[current_card_index].configure(image=g_card_images[g_card_toggle])
   h_win.destroy()
 
 
-def toggle_card(*args, card, player, card_pos, card_handles):
+def toggle_card(*args, card, card_handles):
   """Callback for submit button in the card select popup window
   *args = arguments passed by tkinter
   card = is the value of card that was clicked
-  player = index of player selecting the card
-  card_pos = index representing which card of the player or community cards
   card_handles = a list of label handles of the 52 cards in the selection popup window
   Function will respond to the user left clicking event on one of the card label
   images in the popup window. If user selects or deselects a card the global
@@ -55,14 +49,14 @@ def toggle_card(*args, card, player, card_pos, card_handles):
   # Check if user re-selected the same card or if it is a new selection
   if card == g_card_toggle:
     # They re-selected their card, which means unselect and set to random
-    card_handles[card]['background'] = '#ffffff'
+    card_handles[card].configure(background='#ffffff')
     g_card_toggle = 52
   else:
     # They picked a new card, if their previous card wasn't random, unselect it
     if g_card_toggle != 52:
-      card_handles[g_card_toggle]['background'] = '#ffffff'
+      card_handles[g_card_toggle].configure(background='#ffffff')
     # Select the new card by highlighting it and setting g_card_toggle
-    card_handles[card]['background'] = '#33ff33'
+    card_handles[card].configure(background='#33ff33')
     g_card_toggle = card
 
 
@@ -76,9 +70,9 @@ def choose_card(*args, player, card_pos):
   """
   global g_cards, g_card_toggle
   # Initialize g_card_toggle to the currently selected card from the global list
-  current_card_index = 2 * player + card_pos - 1 if player != -1 else 2 * 9 + card_pos - 1
+  current_card_index = 2 * player + card_pos
   g_card_toggle = g_cards[current_card_index]
-  # Get list of all cards that are chosen to make them blank in the popup
+  # Get list of all cards that are chosen, except for the current card, to make them blank in the popup
   chosen_cards = g_cards[:]
   del chosen_cards[current_card_index]
   # Create popup winddow
@@ -93,18 +87,17 @@ def choose_card(*args, player, card_pos):
   # Create card labels and bind click callback to them if available to select
   card_handles = []
   for card in range(52):
-    card_handles.append(eval(f"ttk.Label(popup,image=c{card}_img, padding='5 5 5 5', relief='groove')"))
+    card_handles.append(ttk.Label(popup,image=g_card_images[card], padding='5 5 5 5', relief='groove'))
     card_handles[card].place(x=(card%13)*card_xspace, y=(card//13)*card_yspace)
     # If card selected in main GUI is one of the 52, then highlight it in picker window
     if card == g_card_toggle:
-      card_handles[card]['background'] = '#33ff33'
+      card_handles[card].configure(background='#33ff33')
     # If card is in chosen_card list then remove its image and unbind the callback, else bind callback
     if card in chosen_cards:
       card_handles[card].unbind('<Button-1>')
-      card_handles[card]['image'] = cNone_img
+      card_handles[card].configure(image=g_card_images[53])
     else:
-      card_handles[card].bind('<Button-1>',
-      partial(toggle_card, card=card, player=player, card_pos=card_pos, card_handles=card_handles))
+      card_handles[card].bind('<Button-1>', partial(toggle_card, card=card, card_handles=card_handles))
   # Create submit and cancel buttons for popup
   ttk.Button(popup, text="Submit", padding="6 6 6 6", \
     command=partial(submit_card, h_win=popup, player=player, card_pos=card_pos)).place(x=win_width//2-100,y=win_height-50)
@@ -124,18 +117,21 @@ def update_num_opp(*args):
   no = int(num_opp.get())
   # Show all players up to num_opp
   for player in range(no + 1):
-    eval(f"h_p{player}_label.place(x=p{player}_start[0], y=p{player}_start[1])")
-    eval(f"h_p{player}_c1_lbl.place(x=p{player}_start[0], y=p{player}_start[1] + card_y_lbl_offset)")
-    eval(f"h_p{player}_c2_lbl.place(x=p{player}_start[0] + card_x_offset, y=p{player}_start[1] + card_y_lbl_offset)")
+    x, y = eval(f"p{player}_start")
+    g_player_labels[player].place(x=x, y=y)
+    y += card_y_lbl_offset
+    g_card_labels[2 * player].place(x=x, y=y)
+    x += card_x_offset
+    g_card_labels[2 * player + 1].place(x=x, y=y)
   # Hide all players above num_opp and and set their cards to random
   for player in range(no + 1, 9):
     # Hide player label
-    eval(f"h_p{player}_label.place_forget()")
+    g_player_labels[player].place_forget()
     # Hide player cards and set card to random
-    for card_pos in range(1, 3):
-      eval(f"h_p{player}_c{card_pos}_lbl.place_forget()")
-      exec(f"h_p{player}_c{card_pos}_lbl['image'] = c52_img")
-      g_cards[2 * player + card_pos - 1] = 52
+    for card_pos in range(2):
+      g_cards[2 * player + card_pos] = 52
+      g_card_labels[2 * player + card_pos].place_forget()
+      g_card_labels[2 * player + card_pos].configure(image=g_card_images[52])
 
 
 def check_num_trials(*args):
@@ -161,19 +157,15 @@ def clear_all_cards(*args):
   """
   global g_cards
   num_players = int(num_opp.get()) + 1
-  # Clear fixed cards for players
+  # Clear fixed cards for players, set to random card and random card image
   for player in range(num_players):
-    for card_pos in range(1, 3):
-      # Set card to random
-      g_cards[2 * player + card_pos - 1] = 52
-      # Set card label image to random
-      exec(f"h_p{player}_c{card_pos}_lbl['image'] = c52_img")
-  # Clear fixed cards for community cards
-  for card_pos in range(1, 6):
-    # Set card to random
-    g_cards[2 * 9 + card_pos - 1] = 52
-    # Set card label image to random
-    exec(f"h_com_c{card_pos}_lbl['image'] = c52_img")
+    for card_pos in range(2):
+      g_cards[2 * player + card_pos] = 52
+      g_card_labels[2 * player + card_pos].configure(image=g_card_images[52])
+  # Clear fixed cards for community cards, set to random card and random card image
+  for card_pos in range(5):
+    g_cards[2 * 9 + card_pos] = 52
+    g_card_labels[2 * 9 + card_pos].configure(image=g_card_images[52])
 
 
 def is_valid_fname(fname):
@@ -230,18 +222,21 @@ def run_load(*args):
   fh = open(fname, 'r')
   # Extract first line
   num_runs, num_opponents, calc_percentages = fh.readline().strip().split()
-  # Extract player cards
+  # Extract player cards and set images
   for player in range(int(num_opponents) + 1):
     cards =  fh.readline().strip().split()
-    g_cards[2 * player] = int(cards[0])
-    g_cards[2 * player + 1] = int(cards[1])
-  # Extract community cards
+    card1 = int(cards[0])
+    card2 = int(cards[1])
+    g_cards[2 * player] = card1
+    g_cards[2 * player + 1] = card2
+    g_card_labels[2 * player].configure(image=g_card_images[card1])
+    g_card_labels[2 * player + 1].configure(image=g_card_images[card2])
+  # Extract community cards and set images
   cards =  fh.readline().strip().split()
-  g_cards[2 * 9] = int(cards[0])
-  g_cards[2 * 9 + 1] = int(cards[1])
-  g_cards[2 * 9 + 2] = int(cards[2])
-  g_cards[2 * 9 + 3] = int(cards[3])
-  g_cards[2 * 9 + 4] = int(cards[4])
+  for card_pos in range(5):
+    card = int(cards[card_pos])
+    g_cards[2 * 9 + card_pos] = card
+    g_card_labels[2 * 9 + card_pos].configure(image=g_card_images[card])
   fh.close()
   # Set option GUI variables
   num_trials.set(num_runs)
@@ -250,19 +245,8 @@ def run_load(*args):
   tie_pct.set("------")
   loss_pct.set("------")
   plot_pct_history.set(calc_percentages)
-  # Clear unused players
+  # Clear unused players and their cards
   update_num_opp()
-  # Load each players card images
-  for player in range(int(num_opponents) + 1):
-    for card_pos in range(1,3):
-      card = g_cards[2 * player + card_pos - 1]
-      # Set card image
-      exec(f"h_p{player}_c{card_pos}_lbl['image'] = c{card}_img")
-  # Load community card images
-  for card_pos in range(1,6):
-    card = g_cards[2 * 9 + card_pos - 1]
-    # Set card image
-    exec(f"h_com_c{card_pos}_lbl['image'] = c{card}_img")
 
 
 def run_report(*args):
@@ -341,41 +325,9 @@ def run_simulation(*args):
   win_pct.set(f"{float(results[0]) * 100:.2f}")
   tie_pct.set(f"{float(results[1]) * 100:.2f}")
   loss_pct.set(f"{float(results[2]) * 100:.2f}")
+  # Plot percentage history if necessary
   if plot_pct_history.get() == '1':
-    dtype = np.dtype('f4')
-    with open(calculator_percent_fname, 'rb') as f:
-      pct_data = 100 * np.fromfile(f, dtype)
-    f.close()
-    x_data = np.linspace(1, num_runs, num_runs).astype(int)
-    win_pct_data  = pct_data[0:num_runs]
-    tie_pct_data  = pct_data[num_runs:2 * num_runs]
-    loss_pct_data = pct_data[2 * num_runs:3 * num_runs]
-    fig = plt.figure(1)
-    plt.clf()
-    plt.plot(x_data, win_pct_data, 'g', label="Win %")
-    plt.plot(x_data, loss_pct_data, 'r', label="Loss %")
-    plt.plot(x_data, tie_pct_data, 'b', label="Tie %")
-    plt.legend(loc="upper right")
-    # if num_runs > 100000:
-    #   plt.xscale('log')
-    plt.axis([1, num_runs, 0, 100])
-    plt.grid(visible=True)
-    title_str = f"{num_runs} Trials for ({CARD_INT_TO_STR[g_cards[0]]}, "\
-                f"{CARD_INT_TO_STR[g_cards[1]]}) vs {sim_config['num_opponents']} "\
-                f"opponent{'s' if sim_config['num_opponents'] > 1 else ''}\n Opponent's Hands: "
-    for player in range(1, sim_config['num_opponents'] + 1):
-      card1 = CARD_INT_TO_STR[g_cards[2 * player]]
-      card2 = CARD_INT_TO_STR[g_cards[2 * player + 1]]
-      if player == sim_config['num_opponents']:
-        title_str += f"({card1}, {card2})"
-      else:
-        title_str += f"({card1}, {card2}), "
-    bcrds = [CARD_INT_TO_STR[e] for e in g_cards[18:23]]
-    title_str += f"\nBoard Cards= ({bcrds[0]}, {bcrds[1]}, {bcrds[2]}, {bcrds[3]}, {bcrds[4]})"
-    plt.title(label=title_str, fontsize=10)
-    plt.show(block = False)
-    fig.canvas.draw()
-    fig.canvas.flush_events()
+    plot_percentages(sim_config)
   # Save simulation in history list for report
   g_sim_num += 1
   sim_history = dict()
@@ -394,14 +346,77 @@ def run_simulation(*args):
   #DEBUG
   if DEBUG:
     print(f"\nSim Config:")
-    print(f"\t# of runs = {num_runs}")
+    print(f"\t# of runs = {sim_config['num_runs']}")
     print(f"\t# of opponents = {sim_config['num_opponents']}")
     print(f"\tDo Percentages = {sim_config['calc_percentages']}")
     for player in range(sim_config['num_opponents'] + 1):
       print(f"\tPlayer #{player} cards = ({g_cards[2 * player]}, {g_cards[2 * player + 1]})")
     cards = g_cards[2 * 9:2 * 9 + 5]
-    print(f"\tCommunity cards = ({cards[0]}, {cards[1]},  {cards[2]}, {cards[3]}, {cards[4]})")
+    print(f"\tCommunity cards = ({cards[0]}, {cards[1]}, {cards[2]}, {cards[3]}, {cards[4]})")
   #DEBUG
+
+
+def plot_percentages(sim_config):
+  num_runs = sim_config['num_runs']
+  dtype = np.dtype('f4')
+  with open(calculator_percent_fname, 'rb') as f:
+    pct_data = 100 * np.fromfile(f, dtype)
+  f.close()
+  x_data = np.linspace(1, num_runs, num_runs).astype(int)
+  win_pct_data  = pct_data[0:num_runs]
+  tie_pct_data  = pct_data[num_runs:2 * num_runs]
+  loss_pct_data = pct_data[2 * num_runs:3 * num_runs]
+  fig = plt.figure(1)
+  plt.clf()
+  plt.plot(x_data, win_pct_data, 'g', label="Win %")
+  plt.plot(x_data, loss_pct_data, 'r', label="Loss %")
+  plt.plot(x_data, tie_pct_data, 'b', label="Tie %")
+  plt.legend(loc="upper right")
+  # if num_runs > 100000:
+  #   plt.xscale('log')
+  plt.axis([1, num_runs, 0, 100])
+  plt.grid(visible=True)
+  title_str = f"{num_runs} Trials for ({CARD_INT_TO_STR[g_cards[0]]}, "\
+              f"{CARD_INT_TO_STR[g_cards[1]]}) vs {sim_config['num_opponents']} "\
+              f"opponent{'s' if sim_config['num_opponents'] > 1 else ''}\n Opponent's Hands: "
+  for player in range(1, sim_config['num_opponents'] + 1):
+    card1 = CARD_INT_TO_STR[g_cards[2 * player]]
+    card2 = CARD_INT_TO_STR[g_cards[2 * player + 1]]
+    if player == sim_config['num_opponents']:
+      title_str += f"({card1}, {card2})"
+    else:
+      title_str += f"({card1}, {card2}), "
+  bcrds = [CARD_INT_TO_STR[e] for e in g_cards[18:23]]
+  title_str += f"\nBoard Cards= ({bcrds[0]}, {bcrds[1]}, {bcrds[2]}, {bcrds[3]}, {bcrds[4]})"
+  plt.title(label=title_str, fontsize=10)
+  plt.show(block = False)
+  fig.canvas.draw()
+  fig.canvas.flush_events()
+
+
+def run_help(*args):
+  """Callback for help button in main GUI
+  *args = arguments passed by tkinter
+  Function will launch a popup window with instructions on how to use the software
+  """
+  # Create popup winddow
+  win_width = 700
+  win_height = 435
+  popup = Toplevel(h_root)
+  popup.geometry(f"{win_width}x{win_height}")
+  popup.geometry(f"+{h_root.winfo_rootx()+main_window_width}"
+                 f"+{h_root.winfo_rooty()+main_window_height//2-win_height//2}")
+  popup.resizable(False, False)
+  popup.title('Help')
+    # Create test area for help instructions
+  with open(HELP_FNAME, 'r') as f:
+    lines = f.readlines()
+  help_str = ''.join(lines)
+  h_text_frame = ttk.Frame(popup, width=win_width, height=win_height, relief="groove", padding="5 5 5 5")
+  h_text_frame.place(relx=0.5, rely=0.5, anchor='center')
+  h_help_text_lbl = ttk.Label(h_text_frame, text=help_str, justify=LEFT,
+  padding="10 10 10 10", background="#ffffff", anchor='center')
+  h_help_text_lbl.place(x=20, y=20)
 #------------------------------------------------------------------------------
 
 
@@ -409,6 +424,7 @@ def run_simulation(*args):
 DEBUG = 0
 API = "https://showboat-rest-api.herokuapp.com/report-generator"
 REPORT_FNAME = "Report.html"
+HELP_FNAME = "help.txt"
 CARD_INT_TO_STR = {
                     0:  '2C',  1: '3C',  2: '4C',   3: '5C',  4: '6C',  5: '7C',
                     6:  '8C',  7: '9C',  8: '10C',  9: 'JC', 10: 'QC', 11: 'KC', 12: 'AC',
@@ -434,10 +450,13 @@ calculator_results_fname = "calcResults.txt"
 calculator_percent_fname = "calcPercents.dat"
 calculator_service_fname = "calcService.txt"
 sim_service_fname        = "holdem_service.txt"
-com_player_num  = -1
+com_player_num  = 9
 initial_num_opp = 1
 num_trials_init = 5000
 num_trials_max  = 10000000
+g_player_labels = []
+g_card_labels = []
+g_card_images = []
 # Non-constant globals
 g_cards = [52] * 23
 g_card_toggle = 52
@@ -506,15 +525,17 @@ h_board_frame = ttk.Frame(h_root_frame, width=board_window_width, height=main_wi
 style = ttk.Style()
 style.theme_use('alt')
 
-# Load card images
+# Load card images into global list
 for card in range(53):
   fname = os.getcwd() + "\\CARDS\\" + f"{card}.png"
-  exec(f"c{card}_img = Image.open(fname)")
-  exec(f"c{card}_img = c{card}_img.resize(({card_width}, {card_height}), Image.Resampling.LANCZOS)")
-  exec(f"c{card}_img = ImageTk.PhotoImage(c{card}_img)")
-cNone_img = Image.open(".\\CARDS\\None.jpg")
-cNone_img = eval(f"cNone_img.resize(({card_width}, {card_height}), Image.Resampling.LANCZOS)")
-cNone_img = ImageTk.PhotoImage(cNone_img)
+  card_img = Image.open(fname)
+  card_img = card_img.resize((card_width, card_height), Image.Resampling.LANCZOS)
+  card_img = ImageTk.PhotoImage(card_img)
+  g_card_images.append(card_img)
+card_img = Image.open(".\\CARDS\\None.jpg")
+card_img = card_img.resize((card_width, card_height), Image.Resampling.LANCZOS)
+card_img = ImageTk.PhotoImage(card_img)
+g_card_images.append(card_img)
 
 # GUI variables
 num_trials = StringVar(value=f"{num_trials_init}")
@@ -534,20 +555,20 @@ for player in range(9):
   else:
     player_label_str = f"Player {player} Cards"
     bg_color = player_label_color
-  exec(f"h_p{player}_label = ttk.Label(h_board_frame, text=player_label_str,"
-  f"relief=label_relief_default, width=player_label_width,"
-  f"padding=label_padding_default, background=bg_color, anchor='center')")
+  player_label = ttk.Label(h_board_frame, text=player_label_str, relief=label_relief_default,
+  width=player_label_width, padding=label_padding_default, background=bg_color, anchor='center')
+  g_player_labels.append(player_label)
   # Card display labels
-  exec(f"h_p{player}_c1_lbl = ttk.Label(h_board_frame, image=c52_img, padding=card_padding_default)")
-  exec(f"h_p{player}_c2_lbl = ttk.Label(h_board_frame, image=c52_img, padding=card_padding_default)")
+  g_card_labels.append(ttk.Label(h_board_frame, image=g_card_images[52], padding=card_padding_default))
+  g_card_labels.append(ttk.Label(h_board_frame, image=g_card_images[52], padding=card_padding_default))
 
 # Community card widgets
 h_com_label = ttk.Label(h_board_frame, text="Community Cards", relief=label_relief_default,
 width=community_label_width, padding=label_padding_default, background=player_label_color,
 anchor='center')
-for card in range(1,6):
-  # Card display labels
-  exec(f"h_com_c{card}_lbl = ttk.Label(h_board_frame, image=c52_img, padding=card_padding_default)")
+# Card display labels
+for card in range(5):
+  g_card_labels.append(ttk.Label(h_board_frame, image=g_card_images[52], padding=card_padding_default))
 
 # Rest of widgets
 h_win_label = ttk.Label(h_root_frame, text="Win %", relief=label_relief_default,
@@ -574,19 +595,23 @@ h_load_btn = ttk.Button(h_root_frame, text="Load", width=btn_width_default, comm
 h_save_btn = ttk.Button(h_root_frame, text="Save", width=btn_width_default, command=run_save)
 h_clear_cards_btn = ttk.Button(h_root_frame, text="Clear Cards", width=btn_width_default, command=clear_all_cards)
 h_toggle_pct_plot = ttk.Checkbutton(h_root_frame, text="Plot % History", variable=plot_pct_history)
+h_help_btn = ttk.Button(h_root_frame, text="Help", width=btn_width_default, command=run_help)
 #------------------------------------------------------------------------------
 
 # Place widgets ---------------------------------------------------------------
 h_root_frame.place(relx=0.5, rely=0.5, anchor='center')
 # Player widgets
 for player in range(initial_num_opp + 1):
-  exec(f"h_p{player}_label.place(x=p{player}_start[0], y=p{player}_start[1])")
-  exec(f"h_p{player}_c1_lbl.place(x=p{player}_start[0], y=p{player}_start[1] + card_y_lbl_offset)")
-  exec(f"h_p{player}_c2_lbl.place(x=p{player}_start[0] + card_x_offset, y=p{player}_start[1] + card_y_lbl_offset)")
+  x, y = eval(f"p{player}_start")
+  g_player_labels[player].place(x=x, y=y)
+  g_card_labels[2 * player].place(x=x, y=y + card_y_lbl_offset)
+  g_card_labels[2 * player + 1].place(x=x + card_x_offset, y=y + card_y_lbl_offset)
+# Community card widgets
 h_com_label.place(x=com_start[0], y=com_start[1])
-for card in range(1,6):
-  x = com_start[0] + (card - 1) * card_x_offset
-  exec(f"h_com_c{card}_lbl.place(x=x, y=com_start[1] + card_y_lbl_offset)")
+for card in range(5):
+  x = com_start[0] + card * card_x_offset
+  g_card_labels[2 * 9 + card].place(x=x, y=com_start[1] + card_y_lbl_offset)
+# Remaining widgets
 h_win_label.place(x=results_start[0], y=results_start[1])
 h_win_result.place(x=results_start[0] + results_x_space, y=results_start[1])
 h_loss_label.place(x=results_start[0], y=results_start[1] + result_y_space)
@@ -604,14 +629,15 @@ h_run_btn.place(x=btn_start[0], y=btn_start[1])
 h_report_btn.place(x=btn_start[0] + btn_x_space, y=btn_start[1])
 h_load_btn.place(x=btn_start[0] + 2 * btn_x_space, y=btn_start[1])
 h_save_btn.place(x=btn_start[0] + 3 * btn_x_space, y=btn_start[1])
+h_help_btn.place(x=btn_start[0] + 3 * btn_x_space, y=btn_start[1] - 50)
 #------------------------------------------------------------------------------
 
 # Key bindings
-for player in range(0,9):
-  exec(f"h_p{player}_c1_lbl.bind('<Button-1>', partial(choose_card, player={player}, card_pos=1))")
-  exec(f"h_p{player}_c2_lbl.bind('<Button-1>', partial(choose_card, player={player}, card_pos=2))")
-for card in range(1,6):
-  exec(f"h_com_c{card}_lbl.bind('<Button-1>', partial(choose_card, player=com_player_num, card_pos={card}))")
+for player in range(9):
+  for card_pos in range(2):
+    g_card_labels[2 * player + card_pos].bind('<Button-1>', partial(choose_card, player=player, card_pos=card_pos))
+for card_pos in range(5):
+  g_card_labels[2 * 9 + card_pos].bind('<Button-1>', partial(choose_card, player=com_player_num, card_pos=card_pos))
 h_num_opp_lb.bind('<<ComboboxSelected>>', update_num_opp)
 
 # Run GUI
