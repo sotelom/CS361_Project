@@ -394,7 +394,7 @@ def plot_percentages(sim_config):
   fig.canvas.flush_events()
 
 
-def run_help(*args):
+def run_help():
   """Callback for help button in main GUI
   *args = arguments passed by tkinter
   Function will launch a popup window with instructions on how to use the software
@@ -402,17 +402,20 @@ def run_help(*args):
   # Create popup winddow
   win_width = 700
   win_height = 435
-  popup = Toplevel(h_root)
-  popup.geometry(f"{win_width}x{win_height}")
-  popup.geometry(f"+{h_root.winfo_rootx()+main_window_width}"
+  if "help_win" in h_root.children:
+    h_help = h_root.children["help_win"]
+  else:
+    h_help = Toplevel(h_root, name="help_win")
+  h_help.geometry(f"{win_width}x{win_height}")
+  h_help.geometry(f"+{h_root.winfo_rootx()+main_window_width}"
                  f"+{h_root.winfo_rooty()+main_window_height//2-win_height//2}")
-  popup.resizable(False, False)
-  popup.title('Help')
+  h_help.resizable(False, False)
+  h_help.title('Help')
     # Create test area for help instructions
   with open(HELP_FNAME, 'r') as f:
     lines = f.readlines()
   help_str = ''.join(lines)
-  h_text_frame = ttk.Frame(popup, width=win_width, height=win_height, relief="groove", padding="5 5 5 5")
+  h_text_frame = ttk.Frame(h_help, width=win_width, height=win_height, relief="groove", padding="5 5 5 5")
   h_text_frame.place(relx=0.5, rely=0.5, anchor='center')
   h_help_text_lbl = ttk.Label(h_text_frame, text=help_str, justify=LEFT,
   padding="10 10 10 10", background="#ffffff", anchor='center')
